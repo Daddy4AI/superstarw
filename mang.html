@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理单词</title>
-    <script type="module" src="firebaseConfig.js"></script>
+    <!-- Firebase App (基础库) -->
+    <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <!-- Firebase Realtime Database -->
+    <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+
     <style>
         /* 进度条样式 */
         #progressBarContainer {
@@ -54,13 +58,28 @@
 
     <!-- 底部版本信息 -->
     <footer>
-        version 002
+        version 001
     </footer>
 
     <script type="module">
-        import { database } from './firebaseConfig.js';
-        import { ref, set } from 'firebase/database';
-        import { csvParse } from 'https://cdn.jsdelivr.net/npm/d3-dsv@3.0.1/dist/d3-dsv.min.js';
+        // Firebase 配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyD4luqKnpoQvBGB4f6BuvwUAzTXqXQrnpI",
+            authDomain: "superstarw-3ddc6.firebaseapp.com",
+            databaseURL: "https://superstarw-3ddc6-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "superstarw-3ddc6",
+            storageBucket: "superstarw-3ddc6.appspot.com",
+            messagingSenderId: "11393876466",
+            appId: "1:11393876466:web:667884c8ea24c95794ab6b",
+            measurementId: "G-HFFB83KWCP"
+        };
+
+        // 初始化 Firebase
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
+        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
 
         document.getElementById('uploadWordsButton').addEventListener('click', function() {
             const file = document.getElementById('uploadFile').files[0];
