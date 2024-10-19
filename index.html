@@ -4,59 +4,178 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Build a Strong Vocabulary</title>
-    <script src="firebaseConfig.js" type="module"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        #stats {
+            margin-top: 40px;
+        }
+        #chartContainer {
+            width: 80%;
+            margin: 20px auto;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>Build a Strong Vocabulary</h1>
+    
+    <!-- 功能按钮 -->
     <button id="viewWordsButton">查看</button>
     <button id="reviewWordsButton">复习</button>
     <button id="testWordsButton">测试</button>
 
+    <!-- 显示单词表格 -->
+    <div id="wordListContainer"></div>
+
+    <!-- 统计信息 -->
     <div id="stats">
-        <h2>测试成绩</h2>
-        <p>过去5次考试的正确率</p>
-        <div id="testResultsTable"></div>
+        <h2>复习单词测试次数分布</h2>
+        <div id="chartContainer">
+            <canvas id="testChart"></canvas>
+        </div>
+
+        <h2>过去5次考试的成绩</h2>
+        <table id="testResultsTable">
+            <thead>
+                <tr>
+                    <th>考试时间</th>
+                    <th>单词数量</th>
+                    <th>正确率</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 数据将通过JS填充 -->
+            </tbody>
+        </table>
     </div>
 
     <script type="module">
-        import { getDatabase, ref, get, child } from "firebase/database";
+        import { database } from './firebaseConfig.js';
+        import { ref, get, child } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 
-        const db = getDatabase();
-        const examListRef = ref(db, 'examlist');
-        
-        // 点击按钮加载复习页面
-        document.getElementById('reviewWordsButton').addEventListener('click', function() {
-            window.location.href = "review.html";
-        });
-
-        // 点击按钮加载测试页面
-        document.getElementById('testWordsButton').addEventListener('click', function() {
-            window.location.href = "testing.html";
-        });
-
-        // 加载查看页面
+        // 查看按钮逻辑：显示今天复习的单词列表
         document.getElementById('viewWordsButton').addEventListener('click', function() {
             loadTodayWords();
         });
 
+        // 复习按钮逻辑：跳转到复习页面
+        document.getElementById('reviewWordsButton').addEventListener('click', function() {
+            window.location.href = "review.html";
+        });
+
+        // 测试按钮逻辑：跳转到测试页面
+        document.getElementById('testWordsButton').addEventListener('click', function() {
+            window.location.href = "testing.html";
+        });
+
+        // 从 Firebase 加载今天复习的单词
         function loadTodayWords() {
-            // 从数据库加载今天复习的单词
-            get(child(examListRef, 'todayWordList')).then((snapshot) => {
+            const todayWordListRef = ref(database, 'todayWordList');
+            get(todayWordListRef).then((snapshot) => {
                 if (snapshot.exists()) {
                     const wordList = snapshot.val();
-                    let tableHtml = "<table><tr><th>单词</th><th>状态</th><th>翻译</th></tr>";
+                    let tableHtml = `<table>
+                        <tr><th>单词</th><th>状态</th><th>翻译</th></tr>`;
                     wordList.forEach(word => {
-                        tableHtml += `<tr><td>${word.word}</td><td>${word.status}</td><td>${word.translation}</td></tr>`;
+                        tableHtml += `<tr>
+                            <td>${word.word}</td>
+                            <td>${word.status}</td>
+                            <td>${word.translation}</td>
+                        </tr>`;
                     });
                     tableHtml += "</table>";
-                    document.getElementById('testResultsTable').innerHTML = tableHtml;
+                    document.getElementById('wordListContainer').innerHTML = tableHtml;
                 } else {
-                    console.log("No data available");
+                    document.getElementById('wordListContainer').innerHTML = "今天没有需要复习的单词。";
                 }
             }).catch((error) => {
-                console.error(error);
+                console.error('加载复习单词时出错:', error);
             });
         }
+
+        // 从 Firebase 加载过去5次的测试成绩
+        function loadTestResults() {
+            const testResultsRef = ref(database, 'testResults');
+            get(testResultsRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const testResults = snapshot.val();
+                    const testResultsTable = document.querySelector("#testResultsTable tbody");
+                    testResultsTable.innerHTML = '';
+                    testResults.slice(-5).forEach(result => {
+                        const row = `<tr>
+                            <td>${new Date(result.exam_time).toLocaleString()}</td>
+                            <td>${result.word_count}</td>
+                            <td>${result.correct_rate}%</td>
+                        </tr>`;
+                        testResultsTable.innerHTML += row;
+                    });
+                }
+            }).catch((error) => {
+                console.error('加载测试成绩时出错:', error);
+            });
+        }
+
+        // 加载单词测试次数分布
+        function loadTestDistribution() {
+            const distributionRef = ref(database, 'testDistribution');
+            get(distributionRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const distribution = snapshot.val();
+                    const labels = Object.keys(distribution); // 测试次数
+                    const data = Object.values(distribution); // 每个测试次数对应的单词数量
+
+                    // 渲染 Chart.js 图表
+                    const ctx = document.getElementById('testChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: '单词数量',
+                                data: data,
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                }
+            }).catch((error) => {
+                console.error('加载测试分布数据时出错:', error);
+            });
+        }
+
+        // 页面加载时调用
+        window.addEventListener('load', () => {
+            loadTestResults();
+            loadTestDistribution();
+        });
     </script>
 </body>
 </html>
