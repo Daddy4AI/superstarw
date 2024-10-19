@@ -75,12 +75,12 @@
 
     <!-- 版本信息 -->
     <footer>
-        version 002
+        version 001
     </footer>
 
     <script type="module">
         import { database } from './firebaseConfig.js';
-        import { ref, set, get, child } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+        import { ref, get, child } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 
         // 初始化数据
         async function initializeData() {
@@ -166,6 +166,28 @@
                 }
 
                 const testResults = testResultSnapshot.val();
+
+                // 为每个单词根据 test_attempt 和 review_attempt 设置状态
+                wordArray.forEach(word => {
+                    const testResult = Object.values(testResults).find(result => result.word_id === word.id);
+                    if (testResult) {
+                        if (testResult.test_attempt === 0 && testResult.review_attempt === 0) {
+                            word.status = "新单词";
+                        } else if (testResult.test_attempt > 0 && testResult.review_attempt === 0) {
+                            word.status = "初始复习";
+                        } else if (testResult.test_attempt > 0 && testResult.review_attempt === 1) {
+                            word.status = "第1次复习";
+                        } else if (testResult.test_attempt > 0 && testResult.review_attempt === 2) {
+                            word.status = "第2次复习";
+                        } else if (testResult.test_attempt > 0 && testResult.review_attempt === 3) {
+                            word.status = "第3次复习";
+                        } else if (testResult.test_attempt > 0 && testResult.review_attempt === 4) {
+                            word.status = "第4次复习";
+                        }
+                    } else {
+                        word.status = "新单词";
+                    }
+                });
 
                 // 1. 获取昨天错误的新单词
                 const YWWord = wordArray.filter(word => {
