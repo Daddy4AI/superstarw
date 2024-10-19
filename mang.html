@@ -60,7 +60,7 @@
 
     <!-- 底部版本信息 -->
     <footer>
-        version 002
+        version 001
     </footer>
 
     <script type="module">
@@ -105,30 +105,35 @@
                     let uploadedWords = 0;
 
                     words.forEach((word, index) => {
-                        const wordId = Date.now() + index; // 防止重复ID
-                        set(ref(database, 'wordlist/' + wordId), {
-                            id: wordId,
-                            word: word.Word,
-                            created_at: new Date().toISOString()
-                        }).then(() => {
-                            uploadedWords++;
-                            // 更新进度条
-                            let progress = Math.floor((uploadedWords / totalWords) * 100);
-                            progressBar.style.width = progress + '%';
-                            progressBar.innerHTML = progress + '%';
+                        // 检查 word.Word 是否为空或未定义
+                        if (word.Word && word.Word.trim() !== '') {
+                            const wordId = Date.now() + index; // 防止重复ID
+                            set(ref(database, 'wordlist/' + wordId), {
+                                id: wordId,
+                                word: word.Word,
+                                created_at: new Date().toISOString()
+                            }).then(() => {
+                                uploadedWords++;
+                                // 更新进度条
+                                let progress = Math.floor((uploadedWords / totalWords) * 100);
+                                progressBar.style.width = progress + '%';
+                                progressBar.innerHTML = progress + '%';
 
-                            // 上传完成时显示成功信息
-                            if (uploadedWords === totalWords) {
+                                // 上传完成时显示成功信息
+                                if (uploadedWords === totalWords) {
+                                    statusMessage.style.display = 'block';
+                                    statusMessage.style.color = 'green';
+                                    statusMessage.innerHTML = '单词已成功上传!';
+                                }
+                            }).catch((error) => {
+                                // 如果出现错误，显示错误信息
                                 statusMessage.style.display = 'block';
-                                statusMessage.style.color = 'green';
-                                statusMessage.innerHTML = '单词已成功上传!';
-                            }
-                        }).catch((error) => {
-                            // 如果出现错误，显示错误信息
-                            statusMessage.style.display = 'block';
-                            statusMessage.style.color = 'red';
-                            statusMessage.innerHTML = '上传失败，请重试。错误信息: ' + error.message;
-                        });
+                                statusMessage.style.color = 'red';
+                                statusMessage.innerHTML = '上传失败，请重试。错误信息: ' + error.message;
+                            });
+                        } else {
+                            console.log(`跳过空白单词在第 ${index + 1} 行`);
+                        }
                     });
                 };
 
