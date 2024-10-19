@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理单词</title>
-    <!-- Firebase App (基础库) -->
-    <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <!-- Firebase Realtime Database -->
-    <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
     <!-- d3-dsv for parsing CSV files -->
     <script src="https://d3js.org/d3-dsv.v1.min.js"></script>
 
@@ -49,6 +45,7 @@
     <h1>管理词汇</h1>
     <input type="file" id="uploadFile" />
     <button id="uploadWordsButton">上传单词</button>
+    <button id="clearWordsButton">清空单词列表</button>
 
     <!-- 进度条 -->
     <div id="progressBarContainer">
@@ -60,29 +57,24 @@
 
     <!-- 底部版本信息 -->
     <footer>
-        version 001
+        version 002
     </footer>
 
     <script type="module">
-        // Firebase 配置
-        const firebaseConfig = {
-            apiKey: "AIzaSyD4luqKnpoQvBGB4f6BuvwUAzTXqXQrnpI",
-            authDomain: "superstarw-3ddc6.firebaseapp.com",
-            databaseURL: "https://superstarw-3ddc6-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "superstarw-3ddc6",
-            storageBucket: "superstarw-3ddc6.appspot.com",
-            messagingSenderId: "11393876466",
-            appId: "1:11393876466:web:667884c8ea24c95794ab6b",
-            measurementId: "G-HFFB83KWCP"
+        // 从 firebaseConfig.js 导入 firebaseConfig 和 database
+        import { firebaseConfig, database } from './firebaseConfig.js';
+        import { ref, set, remove } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+
+        // 获取香港时间
+        const getHongKongTime = () => {
+            const now = new Date();
+            const hongKongOffset = 8 * 60;  // 香港时区是 UTC+8
+            const localOffset = now.getTimezoneOffset();
+            const hongKongTime = new Date(now.getTime() + (hongKongOffset - localOffset) * 60000);
+            return hongKongTime.toISOString();
         };
 
-        // 初始化 Firebase
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
-        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
-
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-
+        // 上传单词逻辑
         document.getElementById('uploadWordsButton').addEventListener('click', function() {
             const file = document.getElementById('uploadFile').files[0];
             if (file) {
@@ -111,7 +103,7 @@
                             set(ref(database, 'wordlist/' + wordId), {
                                 id: wordId,
                                 word: word.Word,
-                                created_at: new Date().toISOString()
+                                created_at: getHongKongTime()  // 使用香港时间
                             }).then(() => {
                                 uploadedWords++;
                                 // 更新进度条
@@ -141,6 +133,17 @@
                 reader.readAsText(file);
             } else {
                 alert('请上传一个CSV文件。');
+            }
+        });
+
+        // 清空 wordlist 逻辑
+        document.getElementById('clearWordsButton').addEventListener('click', function() {
+            if (confirm('确定要清空所有单词吗？这将无法恢复。')) {
+                remove(ref(database, 'wordlist')).then(() => {
+                    alert('单词列表已清空。');
+                }).catch((error) => {
+                    alert('清空单词列表失败: ' + error.message);
+                });
             }
         });
     </script>
