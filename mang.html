@@ -29,6 +29,14 @@
             display: none;
             margin-top: 20px;
         }
+
+        /* 底部版本信息样式 */
+        footer {
+            text-align: center;
+            font-size: 12px;
+            color: grey;
+            margin-top: 50px;
+        }
     </style>
 </head>
 <body>
@@ -43,6 +51,11 @@
 
     <!-- 状态信息 -->
     <div id="statusMessage"></div>
+
+    <!-- 底部版本信息 -->
+    <footer>
+        version 001
+    </footer>
 
     <script type="module">
         import { getDatabase, ref, set } from "firebase/database";
