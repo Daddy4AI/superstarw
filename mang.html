@@ -5,12 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理单词</title>
     <script src="firebaseConfig.js" type="module"></script>
+    <style>
+        /* 进度条样式 */
+        #progressBarContainer {
+            width: 100%;
+            background-color: #f3f3f3;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        #progressBar {
+            width: 0%;
+            height: 24px;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 24px;
+            color: white;
+            border-radius: 8px;
+        }
+
+        #statusMessage {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
     <h1>管理词汇</h1>
     <input type="file" id="uploadFile" />
     <button id="uploadWordsButton">上传单词</button>
-    
+
+    <!-- 进度条 -->
+    <div id="progressBarContainer">
+        <div id="progressBar">0%</div>
+    </div>
+
+    <!-- 状态信息 -->
+    <div id="statusMessage"></div>
+
     <script type="module">
         import { getDatabase, ref, set } from "firebase/database";
         import { csvParse } from 'd3-dsv'; // d3 for parsing CSV
@@ -21,19 +54,52 @@
             const file = document.getElementById('uploadFile').files[0];
             if (file) {
                 const reader = new FileReader();
+
+                // 显示进度条并初始化
+                const progressBar = document.getElementById('progressBar');
+                const progressBarContainer = document.getElementById('progressBarContainer');
+                const statusMessage = document.getElementById('statusMessage');
+                progressBarContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                progressBar.innerHTML = '0%';
+                statusMessage.style.display = 'none';
+
                 reader.onload = function(event) {
                     const text = event.target.result;
                     const words = csvParse(text); // 解析CSV文件
-                    words.forEach((word) => {
-                        const wordId = Date.now();
+
+                    let totalWords = words.length;
+                    let uploadedWords = 0;
+
+                    words.forEach((word, index) => {
+                        const wordId = Date.now() + index; // 防止重复ID
                         set(ref(db, 'wordlist/' + wordId), {
                             id: wordId,
                             word: word.Word,
                             created_at: new Date().toISOString()
+                        }).then(() => {
+                            uploadedWords++;
+                            // 更新进度条
+                            let progress = Math.floor((uploadedWords / totalWords) * 100);
+                            progressBar.style.width = progress + '%';
+                            progressBar.innerHTML = progress + '%';
+
+                            // 上传完成时显示成功信息
+                            if (uploadedWords === totalWords) {
+                                statusMessage.style.display = 'block';
+                                statusMessage.style.color = 'green';
+                                statusMessage.innerHTML = '单词已成功上传!';
+                            }
+                        }).catch((error) => {
+                            // 如果出现错误，显示错误信息
+                            statusMessage.style.display = 'block';
+                            statusMessage.style.color = 'red';
+                            statusMessage.innerHTML = '上传失败，请重试。错误信息: ' + error.message;
                         });
                     });
-                    alert('单词已成功上传!');
                 };
+
+                // 开始读取文件
                 reader.readAsText(file);
             } else {
                 alert('请上传一个CSV文件。');
