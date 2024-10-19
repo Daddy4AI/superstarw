@@ -47,6 +47,20 @@
     <button id="uploadWordsButton">上传单词</button>
     <button id="clearWordsButton">清空单词列表</button>
 
+    <!-- Exam 参数设定 -->
+    <h2>Exam 参数设定</h2>
+    <label for="maxWordN">每天测试单词数量：</label>
+    <select id="maxWordN">
+        <option value="5">5</option>
+        <option value="25">25</option>
+        <option value="30">30</option>
+        <option value="35">35</option>
+        <option value="40">40</option>
+        <option value="45">45</option>
+        <option value="50">50</option>
+    </select>
+    <button id="saveMaxWordNButton">确认设置</button>
+
     <!-- 进度条 -->
     <div id="progressBarContainer">
         <div id="progressBar">0%</div>
@@ -57,13 +71,13 @@
 
     <!-- 底部版本信息 -->
     <footer>
-        version 002
+        version 001
     </footer>
 
     <script type="module">
         // 从 firebaseConfig.js 导入 firebaseConfig 和 database
         import { firebaseConfig, database } from './firebaseConfig.js';
-        import { ref, set, remove } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+        import { ref, set, remove, get, child } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 
         // 获取香港时间
         const getHongKongTime = () => {
@@ -146,6 +160,34 @@
                 });
             }
         });
+
+        // 读取并显示当前的 maxWordN 值
+        const loadMaxWordN = () => {
+            const maxWordNRef = ref(database, 'examSettings/maxWordN');
+            get(maxWordNRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const currentMaxWordN = snapshot.val();
+                    document.getElementById('maxWordN').value = currentMaxWordN;  // 设置下拉框的值
+                } else {
+                    console.log('没有找到 maxWordN 的设置，使用默认值 5');
+                }
+            }).catch((error) => {
+                console.error('加载 maxWordN 时出错:', error);
+            });
+        };
+
+        // 保存 maxWordN 的选择
+        document.getElementById('saveMaxWordNButton').addEventListener('click', function() {
+            const selectedMaxWordN = document.getElementById('maxWordN').value;
+            set(ref(database, 'examSettings/maxWordN'), selectedMaxWordN).then(() => {
+                alert('已保存测试单词数量设置：' + selectedMaxWordN);
+            }).catch((error) => {
+                alert('保存设置时出错：' + error.message);
+            });
+        });
+
+        // 页面加载时读取 maxWordN 设置
+        window.addEventListener('load', loadMaxWordN);
     </script>
 </body>
 </html>
