@@ -82,204 +82,132 @@
         import { database } from './firebaseConfig.js';
         import { ref, get, child } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 
-        // 初始化数据
-        async function initializeData() {
-            const examRef = ref(database, 'examlist');
-            const wordRef = ref(database, 'wordlist');
-            const testResultRef = ref(database, 'TestResult');
+        let maxWordN = 5;  // 默认值为5
 
-            // 检查是否有考试数据
-            const examSnapshot = await get(examRef);
-            if (!examSnapshot.exists()) {
-                // 没有考试记录，创建初始考试记录
-                const initialExam = {
-                    id: 1,
-                    exam_id: 1,
-                    exam_time_start: new Date().toISOString(),
-                    exam_time_end: null
-                };
-                await set(ref(database, 'examlist/1'), initialExam);
-                console.log("已创建初始考试记录");
-            }
-
-            // 检查是否有测试结果
-            const testResultSnapshot = await get(testResultRef);
-            if (!testResultSnapshot.exists()) {
-                // 没有测试记录，创建初始测试结果
-                const wordSnapshot = await get(wordRef);
-                if (wordSnapshot.exists()) {
-                    const words = wordSnapshot.val();
-                    const testResults = {};
-                    Object.keys(words).forEach((wordId, index) => {
-                        testResults[index + 1] = {
-                            id: index + 1,
-                            word_id: wordId,
-                            exam_id: 1,
-                            test_result: false,  // 初始状态为未测试
-                            test_attempt: 0,
-                            review_attempt: 0
-                        };
-                    });
-                    await set(ref(database, 'TestResult'), testResults);
-                    console.log("已创建初始测试记录");
-                }
+        async function loadMaxWordN() {
+            const examSettingsRef = ref(database, 'examSettings/maxWordN');
+            const snapshot = await get(examSettingsRef);
+            if (snapshot.exists()) {
+                maxWordN = snapshot.val();  // 更新 maxWordN
+            } else {
+                console.error('未找到maxWordN设定，使用默认值5');
             }
         }
 
         // 从 Firebase 加载今天复习的单词
         async function loadTodayWords() {
-            try {
-                const examRef = ref(database, 'examlist');
-                const wordRef = ref(database, 'wordlist');
-                const testResultRef = ref(database, 'TestResult');
+            await loadMaxWordN();  // 先加载 maxWordN
+            const examRef = ref(database, 'examlist');
+            const wordRef = ref(database, 'wordlist');
+            const testResultRef = ref(database, 'TestResult');
 
-                // 获取最大的 exam_id
-                const examSnapshot = await get(examRef);
-                if (!examSnapshot.exists()) {
-                    console.error('No exams found.');
-                    return;
-                }
-
-                const exams = examSnapshot.val();
-                const examIds = Object.keys(exams).map(id => parseInt(exams[id].exam_id));
-                const yestExamId = Math.max(...examIds);  // 昨天的最大 exam_id
-                const todayExamId = yestExamId + 1;
-
-                // 计算不同类型的单词
-                const todayWordList = [];
-
-                // 获取 wordlist 数据
-                const wordSnapshot = await get(wordRef);
-                if (!wordSnapshot.exists()) {
-                    console.error('No wordlist found.');
-                    return;
-                }
-
-                const words = wordSnapshot.val();
-                const wordArray = Object.values(words);
-
-                // 获取 TestResult 数据
-                const testResultSnapshot = await get(testResultRef);
-                if (!testResultSnapshot.exists()) {
-                    console.error('No test results found.');
-                    return;
-                }
-
-                const testResults = testResultSnapshot.val();
-
-                // 为每个单词根据 test_attempt 和 review_attempt 设置状态
-                wordArray.forEach(word => {
-                    const testResult = Object.values(testResults).find(result => result.word_id === word.id);
-                    if (testResult) {
-                        if (testResult.test_attempt === 0 && testResult.review_attempt === 0) {
-                            word.status = "新单词";
-                        } else if (testResult.test_attempt > 0 && testResult.review_attempt === 0) {
-                            word.status = "初始复习";
-                        } else if (testResult.test_attempt > 0 && testResult.review_attempt === 1) {
-                            word.status = "第1次复习";
-                        } else if (testResult.test_attempt > 0 && testResult.review_attempt === 2) {
-                            word.status = "第2次复习";
-                        } else if (testResult.test_attempt > 0 && testResult.review_attempt === 3) {
-                            word.status = "第3次复习";
-                        } else if (testResult.test_attempt > 0 && testResult.review_attempt === 4) {
-                            word.status = "第4次复习";
-                        }
-                    } else {
-                        word.status = "新单词";
-                    }
-                });
-
-                // 1. 获取昨天错误的新单词
-                const YWWord = wordArray.filter(word => {
-                    const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id === (todayExamId - 1));
-                    return testResult && testResult.test_result === false && testResult.review_attempt === 0;
-                });
-                todayWordList.push(...YWWord);
-
-                // 2. 获取2天前的单词 (review_attempt: 1)
-                const R2Word = wordArray.filter(word => {
-                    const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id <= (todayExamId - 2));
-                    return testResult && testResult.review_attempt === 1;
-                });
-                todayWordList.push(...R2Word);
-
-                // 3. 获取6天前的单词 (review_attempt: 2)
-                const R6Word = wordArray.filter(word => {
-                    const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id <= (todayExamId - 6));
-                    return testResult && testResult.review_attempt === 2;
-                });
-                todayWordList.push(...R6Word);
-
-                // 4. 获取13天前的单词 (review_attempt: 3)
-                const R13Word = wordArray.filter(word => {
-                    const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id <= (todayExamId - 13));
-                    return testResult && testResult.review_attempt === 3;
-                });
-                todayWordList.push(...R13Word);
-
-                // 5. 获取20天前的单词 (review_attempt: 4)
-                const R20Word = wordArray.filter(word => {
-                    const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id <= (todayExamId - 20));
-                    return testResult && testResult.review_attempt === 4;
-                });
-                todayWordList.push(...R20Word);
-
-                // 6. 如果总数少于 maxWordN，从 wordlist 中加入未测试过的单词
-                const maxWordN = 25;  // 假设 maxWordN 为25，这个值可以从 Firebase 中获取
-                if (todayWordList.length < maxWordN) {
-                    const untestedWords = wordArray.filter(word => {
-                        const testResult = Object.values(testResults).find(result => result.word_id === word.id);
-                        return !testResult;
-                    });
-                    const remainingWords = maxWordN - todayWordList.length;
-                    todayWordList.push(...untestedWords.slice(0, remainingWords));
-                }
-
-                // 将 todayWordList 显示在页面上
-                displayWords(todayWordList);
-            } catch (error) {
-                console.error('加载复习单词时出错:', error);
+            // 获取最大的 exam_id
+            const examSnapshot = await get(examRef);
+            if (!examSnapshot.exists()) {
+                console.error('No exams found.');
+                return;
             }
+
+            const exams = examSnapshot.val();
+            const examIds = Object.keys(exams).map(id => parseInt(exams[id].exam_id));
+            const yestExamId = Math.max(...examIds);  // 昨天的最大 exam_id
+            const todayExamId = yestExamId + 1;
+
+            // 计算不同类型的单词
+            const todayWordList = [];
+
+            // 获取 wordlist 数据
+            const wordSnapshot = await get(wordRef);
+            if (!wordSnapshot.exists()) {
+                console.error('No wordlist found.');
+                return;
+            }
+
+            const words = wordSnapshot.val();
+            const wordArray = Object.values(words);
+
+            // 获取 TestResult 数据
+            const testResultSnapshot = await get(testResultRef);
+            if (!testResultSnapshot.exists()) {
+                console.error('No test results found.');
+                return;
+            }
+
+            const testResults = testResultSnapshot.val();
+
+            // 1. 获取昨天错误的新单词
+            const YWWord = wordArray.filter(word => {
+                const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id === (todayExamId - 1));
+                return testResult && testResult.test_result === false && testResult.review_attempt === 0;
+            });
+            todayWordList.push(...YWWord);
+
+            // 2. 获取2天前的单词 (review_attempt: 1)
+            const R2Word = wordArray.filter(word => {
+                const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id <= (todayExamId - 2));
+                return testResult && testResult.review_attempt === 1;
+            });
+            todayWordList.push(...R2Word);
+
+            // 3. 获取6天前的单词 (review_attempt: 2)
+            const R6Word = wordArray.filter(word => {
+                const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id <= (todayExamId - 6));
+                return testResult && testResult.review_attempt === 2;
+            });
+            todayWordList.push(...R6Word);
+
+            // 4. 获取13天前的单词 (review_attempt: 3)
+            const R13Word = wordArray.filter(word => {
+                const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id <= (todayExamId - 13));
+                return testResult && testResult.review_attempt === 3;
+            });
+            todayWordList.push(...R13Word);
+
+            // 5. 获取20天前的单词 (review_attempt: 4)
+            const R20Word = wordArray.filter(word => {
+                const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id <= (todayExamId - 20));
+                return testResult && testResult.review_attempt === 4;
+            });
+            todayWordList.push(...R20Word);
+
+            // 6. 如果总数少于 maxWordN，从 wordlist 中加入未测试过的单词
+            if (todayWordList.length < maxWordN) {
+                const untestedWords = wordArray.filter(word => {
+                    const testResult = Object.values(testResults).find(result => result.word_id === word.id);
+                    return !testResult;
+                });
+                const remainingWords = maxWordN - todayWordList.length;
+                todayWordList.push(...untestedWords.slice(0, remainingWords));
+            }
+
+            // 将 todayWordList 显示在页面上
+            displayWords(todayWordList);
         }
 
         function displayWords(wordList) {
-            if (wordList.length > 0) {
-                let tableHtml = `<table>
-                    <tr><th>单词</th><th>状态</th><th>翻译</th></tr>`;
-                wordList.forEach(word => {
-                    tableHtml += `<tr>
-                        <td>${word.word}</td>
-                        <td>${word.status}</td>
-                        <td>${word.translation}</td>
-                    </tr>`;
-                });
-                tableHtml += "</table>";
-                document.getElementById('wordListContainer').innerHTML = tableHtml;
-            } else {
-                document.getElementById('wordListContainer').innerHTML = "今天没有需要复习的单词。";
-            }
+            const tbody = document.querySelector('#wordListContainer');
+            tbody.innerHTML = ''; // 清空表格
+
+            wordList.forEach((word, index) => {
+                const row = document.createElement('div');
+                row.textContent = `${index + 1}: ${word.word}`;
+                tbody.appendChild(row);
+            });
         }
 
-        // 查看按钮逻辑：显示今天复习的单词列表
         document.getElementById('viewWordsButton').addEventListener('click', function() {
             loadTodayWords();
         });
 
-        // 复习按钮逻辑：跳转到复习页面
         document.getElementById('reviewWordsButton').addEventListener('click', function() {
             window.location.href = "review.html";
         });
 
-        // 测试按钮逻辑：跳转到测试页面
         document.getElementById('testWordsButton').addEventListener('click', function() {
             window.location.href = "testing.html";
         });
 
-        // 页面加载时初始化数据并加载今天的单词
-        window.addEventListener('load', async () => {
-            await initializeData();
-            loadTodayWords();
-        });
+        window.addEventListener('load', loadTodayWords);
     </script>
 </body>
 </html>
