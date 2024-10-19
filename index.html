@@ -75,12 +75,56 @@
 
     <!-- 版本信息 -->
     <footer>
-        version 001
+        version 002
     </footer>
 
     <script type="module">
         import { database } from './firebaseConfig.js';
-        import { ref, get, child, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+        import { ref, set, get, child } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+
+        // 初始化数据
+        async function initializeData() {
+            const examRef = ref(database, 'examlist');
+            const wordRef = ref(database, 'wordlist');
+            const testResultRef = ref(database, 'TestResult');
+
+            // 检查是否有考试数据
+            const examSnapshot = await get(examRef);
+            if (!examSnapshot.exists()) {
+                // 没有考试记录，创建初始考试记录
+                const initialExam = {
+                    id: 1,
+                    exam_id: 1,
+                    exam_time_start: new Date().toISOString(),
+                    exam_time_end: null
+                };
+                await set(ref(database, 'examlist/1'), initialExam);
+                console.log("已创建初始考试记录");
+            }
+
+            // 检查是否有测试结果
+            const testResultSnapshot = await get(testResultRef);
+            if (!testResultSnapshot.exists()) {
+                // 没有测试记录，创建初始测试结果
+                const wordSnapshot = await get(wordRef);
+                if (wordSnapshot.exists()) {
+                    const words = wordSnapshot.val();
+                    const testResults = {};
+                    Object.keys(words).forEach((wordId, index) => {
+                        testResults[index + 1] = {
+                            id: index + 1,
+                            word_id: wordId,
+                            exam_id: 1,
+                            test_result: false,  // 初始状态为未测试
+                            test_attempt: 0,
+                            review_attempt: 0
+                        };
+                    });
+                    await set(ref(database, 'TestResult'), testResults);
+                    console.log("已创建初始测试记录");
+                }
+            }
+        }
 
         // 从 Firebase 加载今天复习的单词
         async function loadTodayWords() {
@@ -114,14 +158,16 @@
                 const words = wordSnapshot.val();
                 const wordArray = Object.values(words);
 
-                // 1. 获取昨天错误的新单词
+                // 获取 TestResult 数据
                 const testResultSnapshot = await get(testResultRef);
                 if (!testResultSnapshot.exists()) {
                     console.error('No test results found.');
                     return;
                 }
+
                 const testResults = testResultSnapshot.val();
 
+                // 1. 获取昨天错误的新单词
                 const YWWord = wordArray.filter(word => {
                     const testResult = Object.values(testResults).find(result => result.word_id === word.id && result.exam_id === (todayExamId - 1));
                     return testResult && testResult.test_result === false && testResult.review_attempt === 0;
@@ -207,8 +253,9 @@
             window.location.href = "testing.html";
         });
 
-        // 页面加载时调用
-        window.addEventListener('load', () => {
+        // 页面加载时初始化数据并加载今天的单词
+        window.addEventListener('load', async () => {
+            await initializeData();
             loadTodayWords();
         });
     </script>
