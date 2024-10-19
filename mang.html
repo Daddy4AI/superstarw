@@ -8,6 +8,8 @@
     <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
     <!-- Firebase Realtime Database -->
     <script type="module" src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+    <!-- d3-dsv for parsing CSV files -->
+    <script src="https://d3js.org/d3-dsv.v1.min.js"></script>
 
     <style>
         /* 进度条样式 */
@@ -58,7 +60,7 @@
 
     <!-- 底部版本信息 -->
     <footer>
-        version 001
+        version 002
     </footer>
 
     <script type="module">
@@ -97,7 +99,7 @@
 
                 reader.onload = function(event) {
                     const text = event.target.result;
-                    const words = csvParse(text); // 解析CSV文件
+                    const words = d3.csvParse(text); // 解析CSV文件
 
                     let totalWords = words.length;
                     let uploadedWords = 0;
