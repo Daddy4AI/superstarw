@@ -1,7 +1,8 @@
 // firebaseConfig.js
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, set, get, child, update } from 'firebase/database';
+import { getDatabase } from 'firebase/database';
 
+// Firebase 配置
 export const firebaseConfig = {
   apiKey: "AIzaSyD4luqKnpoQvBGB4f6BuvwUAzTXqXQrnpI",
   authDomain: "superstarw-3ddc6.firebaseapp.com",
@@ -15,4 +16,4 @@ export const firebaseConfig = {
 
 // 初始化 Firebase
 const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+export const database = getDatabase(app);
