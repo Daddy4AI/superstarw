@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理单词</title>
+    <script src="firebaseConfig.js" type="module"></script>
+</head>
+<body>
+    <h1>管理词汇</h1>
+    <input type="file" id="uploadFile" />
+    <button id="uploadWordsButton">上传单词</button>
+    
+    <script type="module">
+        import { getDatabase, ref, set } from "firebase/database";
+        import { csvParse } from 'd3-dsv'; // d3 for parsing CSV
+
+        const db = getDatabase();
+
+        document.getElementById('uploadWordsButton').addEventListener('click', function() {
+            const file = document.getElementById('uploadFile').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const text = event.target.result;
+                    const words = csvParse(text); // 解析CSV文件
+                    words.forEach((word) => {
+                        const wordId = Date.now();
+                        set(ref(db, 'wordlist/' + wordId), {
+                            id: wordId,
+                            word: word.Word,
+                            created_at: new Date().toISOString()
+                        });
+                    });
+                    alert('单词已成功上传!');
+                };
+                reader.readAsText(file);
+            } else {
+                alert('请上传一个CSV文件。');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build a Strong Vocabulary</title>
+    <script src="firebaseConfig.js" type="module"></script>
+</head>
+<body>
+    <h1>Build a Strong Vocabulary</h1>
+    <button id="viewWordsButton">查看</button>
+    <button id="reviewWordsButton">复习</button>
+    <button id="testWordsButton">测试</button>
+
+    <div id="stats">
+        <h2>测试成绩</h2>
+        <p>过去5次考试的正确率</p>
+        <div id="testResultsTable"></div>
+    </div>
+
+    <script type="module">
+        import { getDatabase, ref, get, child } from "firebase/database";
+
+        const db = getDatabase();
+        const examListRef = ref(db, 'examlist');
+        
+        // 点击按钮加载复习页面
+        document.getElementById('reviewWordsButton').addEventListener('click', function() {
+            window.location.href = "review.html";
+        });
+
+        // 点击按钮加载测试页面
+        document.getElementById('testWordsButton').addEventListener('click', function() {
+            window.location.href = "testing.html";
+        });
+
+        // 加载查看页面
+        document.getElementById('viewWordsButton').addEventListener('click', function() {
+            loadTodayWords();
+        });
+
+        function loadTodayWords() {
+            // 从数据库加载今天复习的单词
+            get(child(examListRef, 'todayWordList')).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const wordList = snapshot.val();
+                    let tableHtml = "<table><tr><th>单词</th><th>状态</th><th>翻译</th></tr>";
+                    wordList.forEach(word => {
+                        tableHtml += `<tr><td>${word.word}</td><td>${word.status}</td><td>${word.translation}</td></tr>`;
+                    });
+                    tableHtml += "</table>";
+                    document.getElementById('testResultsTable').innerHTML = tableHtml;
+                } else {
+                    console.log("No data available");
+                }
+            }).catch((error) => {
+                console.error(error);
+            });
+        }
+    </script>
+</body>
+</html>
