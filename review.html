@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>复习单词</title>
+    <title>Review Words</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,159 +12,176 @@
         table {
             margin: 20px auto;
             border-collapse: collapse;
+            width: 80%;
         }
         th, td {
             border: 1px solid #ddd;
             padding: 8px;
+            text-align: center;
         }
         th {
             background-color: #f2f2f2;
         }
         .hidden-word {
-            color: transparent;
+            cursor: pointer;
         }
         .floating-button {
-            display: none;
             position: fixed;
             bottom: 20px;
             right: 20px;
-            padding: 15px 30px;
+            padding: 15px;
             background-color: #4caf50;
             color: white;
             border: none;
-            border-radius: 5px;
-            font-size: 18px;
+            border-radius: 50%;
             cursor: pointer;
-        }
-        .correct {
-            color: green;
-        }
-        .incorrect {
-            color: red;
+            font-size: 18px;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>第<span id="examId">[todayExam_id]</span>次复习，继续加油</h1>
-    
+    <h1 id="title"></h1>
     <h2>需要复习的单词列表</h2>
     <table id="wordTable">
         <thead>
             <tr>
                 <th>ID</th>
                 <th>单词</th>
-                <th>输入</th>
-                <th>结果</th>
+                <th>播放</th>
+                <th>拼写</th>
+                <th>复习结果</th>
             </tr>
         </thead>
         <tbody>
-            <!-- 单词列表将通过JavaScript插入 -->
+            <!-- 动态填充单词列表 -->
         </tbody>
     </table>
-
     <button id="startTestButton" class="floating-button">开始测试</button>
 
     <script type="module">
         import { database } from './firebaseConfig.js';
         import { ref, get } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 
-        let todayTestList = [];
-        let maxWordN = 5; // 假设从 Firebase 读取的 maxWordN 为 5
-        let todayExamId = 1; // 假设当前 exam_id 为 1，这个值可以从 Firebase 获取
-        document.getElementById('examId').textContent = todayExamId;
+        let todayWordList = [];
+        let maxWordN = 10;
+        let todayExamId = 0;
 
-        async function loadTodayWords() {
-            // 从 Firebase 中获取今天的复习单词
-            const wordListRef = ref(database, 'todayWordList');
-            const snapshot = await get(wordListRef);
-
+        async function initPage() {
+            const examSettingsRef = ref(database, 'examSettings');
+            const examRef = ref(database, 'Examlist');
+            const snapshot = await get(examSettingsRef);
             if (snapshot.exists()) {
-                const todayWordList = snapshot.val();
-                todayTestList = todayWordList.slice(0, maxWordN); // 只取 maxWordN 个单词作为 todayTestList
-                displayWords(todayWordList);
-            } else {
-                console.error('今天没有复习单词');
+                maxWordN = snapshot.val().maxWordN || 10;
             }
+
+            const examSnapshot = await get(examRef);
+            if (examSnapshot.exists()) {
+                todayExamId = Math.max(...Object.values(examSnapshot.val()).map(exam => exam.exam_id)) + 1;
+            }
+
+            document.getElementById('title').textContent = `第${todayExamId}次复习，继续加油`;
+
+            // 假设 todayWordList 从 index.html 传递，或者通过缓存等方式存储
+            todayWordList = JSON.parse(localStorage.getItem("todayWordList")) || [];
+
+            renderTable();
         }
 
-        function displayWords(wordList) {
-            const tbody = document.querySelector('#wordTable tbody');
-            tbody.innerHTML = ''; // 清空表格
+        function renderTable() {
+            const tableBody = document.getElementById('wordTable').querySelector('tbody');
+            tableBody.innerHTML = '';
 
-            wordList.forEach((word, index) => {
-                const isTodayTestWord = index < maxWordN;
-                const wordId = index + 1;
-                const hiddenWord = '*'.repeat(10);
-
+            todayWordList.forEach((word, index) => {
                 const row = document.createElement('tr');
 
                 const idCell = document.createElement('td');
-                idCell.textContent = wordId;
+                idCell.textContent = word.id;
                 row.appendChild(idCell);
 
                 const wordCell = document.createElement('td');
                 wordCell.textContent = word.word;
-                wordCell.classList.add('hidden-word');
-                wordCell.addEventListener('click', function() {
-                    wordCell.textContent = word.word;
-                });
+                wordCell.classList.add('word-cell');
+                wordCell.dataset.word = word.word;
                 row.appendChild(wordCell);
 
+                const playCell = document.createElement('td');
+                const playButton = document.createElement('button');
+                playButton.textContent = "播放";
+                playButton.onclick = () => playAudio(word.word);
+                playCell.appendChild(playButton);
+                row.appendChild(playCell);
+
                 const inputCell = document.createElement('td');
-                if (isTodayTestWord) {
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.addEventListener('focus', function() {
-                        wordCell.textContent = hiddenWord;
-                    });
-                    input.addEventListener('keypress', function(event) {
-                        if (event.key === 'Enter') {
-                            const inputValue = input.value.trim().toLowerCase();
-                            if (inputValue === word.word.toLowerCase()) {
-                                resultCell.textContent = '正确';
-                                resultCell.classList.add('correct');
-                                moveToNextInput(input);
-                                checkCompletion();
-                            } else {
-                                resultCell.textContent = '错误，再尝试';
-                                resultCell.classList.add('incorrect');
-                                input.value = ''; // 清空输入框
-                                input.focus(); // 重新获取焦点
-                            }
-                        }
-                    });
-                    inputCell.appendChild(input);
+                if (index < maxWordN) {
+                    const inputField = document.createElement('input');
+                    inputField.type = 'text';
+                    inputField.onfocus = () => hideWordAndPlay(wordCell, word.word);
+                    inputField.onblur = () => showWord(wordCell, word.word);
+                    inputField.onkeypress = (e) => handleKeyPress(e, inputField, wordCell, word.word, row, index);
+                    inputCell.appendChild(inputField);
                 }
                 row.appendChild(inputCell);
 
                 const resultCell = document.createElement('td');
-                resultCell.textContent = '';
+                resultCell.classList.add('result-cell');
                 row.appendChild(resultCell);
 
-                tbody.appendChild(row);
+                tableBody.appendChild(row);
             });
         }
 
-        function moveToNextInput(currentInput) {
-            const inputs = document.querySelectorAll('input');
-            const currentIndex = Array.from(inputs).indexOf(currentInput);
-            if (currentIndex < inputs.length - 1) {
-                inputs[currentIndex + 1].focus();
+        function hideWordAndPlay(cell, word) {
+            cell.textContent = '*'.repeat(10);
+            playAudio(word);
+        }
+
+        function showWord(cell, word) {
+            cell.textContent = word;
+        }
+
+        function playAudio(word) {
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US';
+            speechSynthesis.speak(utterance);
+        }
+
+        function handleKeyPress(e, inputField, wordCell, word, row, index) {
+            if (e.key === 'Enter') {
+                if (inputField.value.toLowerCase() === word.toLowerCase()) {
+                    row.querySelector('.result-cell').textContent = '正确';
+                    moveToNextInput(index + 1);
+                } else {
+                    row.querySelector('.result-cell').textContent = '错误，再尝试';
+                    inputField.value = '';
+                    inputField.focus();
+                }
+                checkCompletion();
+            }
+        }
+
+        function moveToNextInput(nextIndex) {
+            const nextInput = document.querySelector(`tbody tr:nth-child(${nextIndex + 1}) input`);
+            if (nextInput) {
+                nextInput.focus();
             }
         }
 
         function checkCompletion() {
-            const allCorrect = Array.from(document.querySelectorAll('.correct')).length === todayTestList.length;
+            const allCorrect = Array.from(document.querySelectorAll('.result-cell'))
+                .slice(0, maxWordN)
+                .every(cell => cell.textContent === '正确');
+
             if (allCorrect) {
                 document.getElementById('startTestButton').style.display = 'block';
             }
         }
 
-        document.getElementById('startTestButton').addEventListener('click', function() {
-            window.location.href = 'testing.html';
-        });
+        document.getElementById('startTestButton').onclick = () => {
+            window.location.href = "testing.html";
+        };
 
-        window.addEventListener('load', loadTodayWords);
+        window.addEventListener('DOMContentLoaded', initPage);
     </script>
 </body>
 </html>

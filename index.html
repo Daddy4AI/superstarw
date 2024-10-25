@@ -163,6 +163,10 @@
             }
 
             displayWords(todayWordList);
+
+                // 保存 todayWordList 到 localStorage
+            localStorage.setItem("todayWordList", JSON.stringify(todayWordList));
+
         }
 
         function displayWords(wordList) {
