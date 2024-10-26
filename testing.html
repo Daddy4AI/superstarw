@@ -1,47 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Testing Words</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
         }
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 20px;
+        .loading {
+            font-size: 14px;
+            color: grey;
+            margin-bottom: 10px;
         }
-        #loadingMessage {
-            font-size: 18px;
-            color: gray;
-            margin-top: 10px;
+        .buttons {
+            margin: 20px;
         }
-        #wordDisplay, #wordTestProgress {
+        .word-display {
             font-size: 24px;
-            margin-top: 10px;
-        }
-        #wordDisplay {
+            margin: 20px;
             cursor: pointer;
+        }
+        .progress-display, .word-display, input[type="text"] {
+            width: 50%;
+            text-align: center;
+            margin: auto;
         }
         input[type="text"] {
-            width: 20ch;
+            padding: 10px;
             font-size: 18px;
-            text-align: left;
         }
-        #playButton, #nextButton {
-            padding: 10px 20px;
-            font-size: 18px;
-            margin: 10px;
-            cursor: pointer;
-        }
-        #nextButton[disabled] {
-            background-color: #ddd;
-            cursor: not-allowed;
-        }
-        footer {
+        .footer {
             margin-top: 40px;
             font-size: 12px;
             color: grey;
@@ -49,38 +39,32 @@
     </style>
 </head>
 <body>
-    <div id="loadingMessage">正在进行加载部件和单词，请稍后</div>
-
+    <div class="loading" id="loadingMessage">正在进行加载部件和单词，请稍后</div>
     <h1 id="title"></h1>
     <h2 id="progressTitle"></h2>
 
-    <div class="container">
-        <button id="playButton">Play Sound</button>
-        <button id="nextButton" disabled>Next Word</button>
+    <div class="buttons">
+        <button id="playSoundButton" onclick="playCurrentWord()">Play Sound</button>
+        <button id="nextWordButton" onclick="loadNextWord()" disabled>Next Word</button>
     </div>
 
-    <div class="container">
-        <div id="wordDisplay">**********</div>
-    </div>
-    <div class="container">
-        <div id="wordTestProgress"></div>
-    </div>
+    <div class="word-display" id="wordDisplay">**********</div>
+    <div class="progress-display" id="wordTestProgress">测试状态</div>
 
-    <input type="text" id="inputField" placeholder="Type here..." autocomplete="off" />
+    <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off" onfocus="resetWordDisplay()">
 
-    <footer>version 001</footer>
+    <div class="footer">version 001</div>
 
     <script type="module">
         import { database } from './firebaseConfig.js';
-        import { ref, get, update } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+        import { ref, set, get, update } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 
+        let todayExamId = 0;
         let todayTestList = [];
         let maxWordN = 10;
-        let todayExamId = 0;
         let currentWordIndex = 0;
-        let currentWord = '';
+        let currentWord = null;
         let retestCount = 0;
-        let firstAttempt = true;
 
         async function initPage() {
             const examSettingsRef = ref(database, 'examSettings');
@@ -97,56 +81,35 @@
 
             document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
 
-            // 从 localStorage 获取 todayTestList
+            // 获取 todayTestList（1 到 maxWordN 的单词）
             todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
-            
-            // 完成加载后隐藏提示信息并加载第一个单词
-            document.getElementById('loadingMessage').style.display = 'none';
-            loadCurrentWord();
+            if (!todayTestList.length) {
+                alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
+                return;
+            }
+
+            // 移除加载消息，显示测试进度
+            document.getElementById('loadingMessage').style.display = "none";
+            loadWord();
         }
 
-        function loadCurrentWord() {
+        function loadWord() {
             if (currentWordIndex >= todayTestList.length) {
                 alert("完成今天的测试");
                 window.location.href = "result.html";
                 return;
             }
 
-            currentWord = todayTestList[currentWordIndex].word;
-            firstAttempt = true;
+            currentWord = todayTestList[currentWordIndex];
+            document.getElementById("progressTitle").textContent = `${currentWordIndex + 1} out of ${maxWordN}个单词`;
+            document.getElementById("wordDisplay").textContent = "**********";
+            document.getElementById("wordTestProgress").textContent = "测试状态";
+            document.getElementById("inputField").value = "";
             retestCount = 0;
-
-            document.getElementById('progressTitle').textContent = `${currentWordIndex + 1} out of ${maxWordN} 个单词`;
-            document.getElementById('wordDisplay').textContent = '**********';
-            document.getElementById('wordTestProgress').textContent = '';
-            document.getElementById('inputField').value = '';
-            document.getElementById('inputField').placeholder = 'Type here...';
-            document.getElementById('nextButton').disabled = true;
-
-            // 自动播放当前单词的发音
-            playAudio(currentWord);
+            
+            // 播放单词发音
+            playAudio(currentWord.word);
         }
-
-        document.getElementById('playButton').onclick = () => playAudio(currentWord);
-
-        document.getElementById('nextButton').onclick = () => {
-            currentWordIndex++;
-            loadCurrentWord();
-        };
-
-        document.getElementById('wordDisplay').onclick = () => {
-            document.getElementById('wordDisplay').textContent = currentWord;
-        };
-
-        document.getElementById('inputField').onfocus = () => {
-            document.getElementById('wordDisplay').textContent = '**********';
-        };
-
-        document.getElementById('inputField').onkeypress = (e) => {
-            if (e.key === 'Enter') {
-                handleInput();
-            }
-        };
 
         function playAudio(word) {
             const utterance = new SpeechSynthesisUtterance(word);
@@ -154,58 +117,78 @@
             speechSynthesis.speak(utterance);
         }
 
-        async function handleInput() {
-            const inputField = document.getElementById('inputField');
-            const wordTestProgress = document.getElementById('wordTestProgress');
-            const userInput = inputField.value.trim().toLowerCase();
+        function playCurrentWord() {
+            playAudio(currentWord.word);
+        }
 
-            if (userInput === currentWord.toLowerCase()) {
-                if (firstAttempt) {
-                    await recordTestResult(true);
-                    document.getElementById('wordDisplay').textContent = currentWord;
-                    wordTestProgress.textContent = '准备下一个单词';
-                    document.getElementById('nextButton').disabled = false;
+        function resetWordDisplay() {
+            document.getElementById("wordDisplay").textContent = "**********";
+        }
+
+        function checkSpelling() {
+            const inputField = document.getElementById("inputField");
+            const userSpelling = inputField.value.trim().toLowerCase();
+            const correctSpelling = currentWord.word.toLowerCase();
+
+            if (userSpelling === correctSpelling) {
+                if (retestCount === 0) {
+                    saveTestResult(true);
+                    document.getElementById("wordTestProgress").textContent = "准备下一个单词";
                 } else {
-                    wordTestProgress.textContent = `完成第${3 - retestCount}次测试，还有${retestCount}次`;
-                    document.getElementById('wordDisplay').textContent = currentWord;
-                    retestCount--;
-                    if (retestCount === 0) {
-                        document.getElementById('nextButton').disabled = false;
+                    retestCount++;
+                    document.getElementById("wordTestProgress").textContent = `完成第${retestCount}次测试，还有${3 - retestCount}次`;
+                    
+                    if (retestCount >= 3) {
+                        document.getElementById("nextWordButton").disabled = false;
                     }
                 }
             } else {
-                if (firstAttempt) {
-                    await recordTestResult(false);
-                    retestCount = 3;
-                    firstAttempt = false;
-                    wordTestProgress.textContent = '错误，再测试3次';
-                } else {
-                    wordTestProgress.textContent = '拼写不正确，继续尝试';
-                    inputField.placeholder = '重按输入键清空输入框';
+                if (retestCount === 0) {
+                    saveTestResult(false);
+                    document.getElementById("wordTestProgress").textContent = "错误，再测试3次";
+                    retestCount++;
+                } else if (retestCount < 3) {
+                    document.getElementById("wordTestProgress").textContent = "拼写不正确，继续尝试";
+                    inputField.value = "";
+                    inputField.focus();
                 }
-                inputField.value = '';
-                inputField.focus();
+                if (retestCount === 3) {
+                    document.getElementById("nextWordButton").disabled = false;
+                }
             }
         }
 
-        async function recordTestResult(isCorrect) {
-            const word = todayTestList[currentWordIndex];
-            const resultRef = ref(database, `TestResult/${word.id}`);
-            const snapshot = await get(resultRef);
-            let newReviewAttempt = 1;
+        async function saveTestResult(isCorrect) {
+            const wordRef = ref(database, `TestResult/${currentWord.id}`);
+            const resultSnapshot = await get(wordRef);
+            const maxReviewId = resultSnapshot.exists() ? resultSnapshot.val().review_attempt || 0 : 0;
+            const newReviewId = isCorrect ? maxReviewId + 1 : maxReviewId;
 
-            if (snapshot.exists()) {
-                const testResult = snapshot.val();
-                const currentReviewAttempt = testResult.review_attempt || 0;
-                newReviewAttempt = isCorrect ? currentReviewAttempt + 1 : currentReviewAttempt;
-            }
-
-            await update(resultRef, {
+            update(wordRef, {
                 test_result: isCorrect,
                 exam_id: todayExamId,
-                review_attempt: newReviewAttempt
+                review_attempt: newReviewId
             });
+
+            document.getElementById("wordDisplay").textContent = currentWord.word;
+            document.getElementById("inputField").value = "";
         }
+
+        function loadNextWord() {
+            document.getElementById("nextWordButton").disabled = true;
+            currentWordIndex++;
+            loadWord();
+        }
+
+        document.getElementById("wordDisplay").onclick = () => {
+            document.getElementById("wordDisplay").textContent = currentWord.word;
+        };
+
+        document.getElementById("inputField").addEventListener("keypress", (e) => {
+            if (e.key === 'Enter') {
+                checkSpelling();
+            }
+        });
 
         window.addEventListener('DOMContentLoaded', initPage);
     </script>
