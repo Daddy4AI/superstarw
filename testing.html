@@ -93,7 +93,7 @@
             loadWord();
         }
 
-        function loadWord() {
+        async function loadWord() {
             if (currentWordIndex >= todayTestList.length) {
                 alert("完成今天的测试");
                 window.location.href = "result.html";
@@ -111,21 +111,21 @@
             playAudio(currentWord.word);
         }
 
-        function playAudio(word) {
+        async function playAudio(word) {
             const utterance = new SpeechSynthesisUtterance(word);
             utterance.lang = 'en-US';
             speechSynthesis.speak(utterance);
         }
 
-        function playCurrentWord() {
+        async function playCurrentWord() {
             playAudio(currentWord.word);
         }
 
-        function resetWordDisplay() {
+        async function resetWordDisplay() {
             document.getElementById("wordDisplay").textContent = "**********";
         }
 
-        function checkSpelling() {
+        async function checkSpelling() {
             const inputField = document.getElementById("inputField");
             const userSpelling = inputField.value.trim().toLowerCase();
             const correctSpelling = currentWord.word.toLowerCase();
