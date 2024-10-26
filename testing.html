@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="viewport" content="width=device-width, initial-scale=1.0">
     <title>Testing Words</title>
     <style>
         body {
@@ -15,11 +14,16 @@
             align-items: center;
             margin-top: 20px;
         }
+        #loadingMessage {
+            font-size: 18px;
+            color: gray;
+            margin-top: 10px;
+        }
         #wordDisplay, #wordTestProgress {
-            width: 20ch;
-            margin: 0 10px;
-            text-align: left;
             font-size: 24px;
+            margin-top: 10px;
+        }
+        #wordDisplay {
             cursor: pointer;
         }
         input[type="text"] {
@@ -45,6 +49,8 @@
     </style>
 </head>
 <body>
+    <div id="loadingMessage">正在进行加载部件和单词，请稍后</div>
+
     <h1 id="title"></h1>
     <h2 id="progressTitle"></h2>
 
@@ -55,6 +61,8 @@
 
     <div class="container">
         <div id="wordDisplay">**********</div>
+    </div>
+    <div class="container">
         <div id="wordTestProgress"></div>
     </div>
 
@@ -64,7 +72,7 @@
 
     <script type="module">
         import { database } from './firebaseConfig.js';
-        import { ref, set, get, update } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+        import { ref, get, update } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 
         let todayTestList = [];
         let maxWordN = 10;
@@ -91,6 +99,9 @@
 
             // 从 localStorage 获取 todayTestList
             todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
+            
+            // 完成加载后隐藏提示信息并加载第一个单词
+            document.getElementById('loadingMessage').style.display = 'none';
             loadCurrentWord();
         }
 
@@ -109,7 +120,11 @@
             document.getElementById('wordDisplay').textContent = '**********';
             document.getElementById('wordTestProgress').textContent = '';
             document.getElementById('inputField').value = '';
+            document.getElementById('inputField').placeholder = 'Type here...';
             document.getElementById('nextButton').disabled = true;
+
+            // 自动播放当前单词的发音
+            playAudio(currentWord);
         }
 
         document.getElementById('playButton').onclick = () => playAudio(currentWord);
@@ -166,6 +181,7 @@
                     wordTestProgress.textContent = '错误，再测试3次';
                 } else {
                     wordTestProgress.textContent = '拼写不正确，继续尝试';
+                    inputField.placeholder = '重按输入键清空输入框';
                 }
                 inputField.value = '';
                 inputField.focus();
