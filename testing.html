@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Words</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+        #wordDisplay, #wordTestProgress {
+            width: 20ch;
+            margin: 0 10px;
+            text-align: left;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        input[type="text"] {
+            width: 20ch;
+            font-size: 18px;
+            text-align: left;
+        }
+        #playButton, #nextButton {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        #nextButton[disabled] {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+        footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: grey;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="title"></h1>
+    <h2 id="progressTitle"></h2>
+
+    <div class="container">
+        <button id="playButton">Play Sound</button>
+        <button id="nextButton" disabled>Next Word</button>
+    </div>
+
+    <div class="container">
+        <div id="wordDisplay">**********</div>
+        <div id="wordTestProgress"></div>
+    </div>
+
+    <input type="text" id="inputField" placeholder="Type here..." autocomplete="off" />
+
+    <footer>version 001</footer>
+
+    <script type="module">
+        import { database } from './firebaseConfig.js';
+        import { ref, set, get, update } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+
+        let todayTestList = [];
+        let maxWordN = 10;
+        let todayExamId = 0;
+        let currentWordIndex = 0;
+        let currentWord = '';
+        let retestCount = 0;
+        let firstAttempt = true;
+
+        async function initPage() {
+            const examSettingsRef = ref(database, 'examSettings');
+            const examRef = ref(database, 'Examlist');
+            const snapshot = await get(examSettingsRef);
+            if (snapshot.exists()) {
+                maxWordN = snapshot.val().maxWordN || 10;
+            }
+
+            const examSnapshot = await get(examRef);
+            if (examSnapshot.exists()) {
+                todayExamId = Math.max(...Object.values(examSnapshot.val()).map(exam => exam.exam_id)) + 1;
+            }
+
+            document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
+
+            // 从 localStorage 获取 todayTestList
+            todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
+            loadCurrentWord();
+        }
+
+        function loadCurrentWord() {
+            if (currentWordIndex >= todayTestList.length) {
+                alert("完成今天的测试");
+                window.location.href = "result.html";
+                return;
+            }
+
+            currentWord = todayTestList[currentWordIndex].word;
+            firstAttempt = true;
+            retestCount = 0;
+
+            document.getElementById('progressTitle').textContent = `${currentWordIndex + 1} out of ${maxWordN} 个单词`;
+            document.getElementById('wordDisplay').textContent = '**********';
+            document.getElementById('wordTestProgress').textContent = '';
+            document.getElementById('inputField').value = '';
+            document.getElementById('nextButton').disabled = true;
+        }
+
+        document.getElementById('playButton').onclick = () => playAudio(currentWord);
+
+        document.getElementById('nextButton').onclick = () => {
+            currentWordIndex++;
+            loadCurrentWord();
+        };
+
+        document.getElementById('wordDisplay').onclick = () => {
+            document.getElementById('wordDisplay').textContent = currentWord;
+        };
+
+        document.getElementById('inputField').onfocus = () => {
+            document.getElementById('wordDisplay').textContent = '**********';
+        };
+
+        document.getElementById('inputField').onkeypress = (e) => {
+            if (e.key === 'Enter') {
+                handleInput();
+            }
+        };
+
+        function playAudio(word) {
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US';
+            speechSynthesis.speak(utterance);
+        }
+
+        async function handleInput() {
+            const inputField = document.getElementById('inputField');
+            const wordTestProgress = document.getElementById('wordTestProgress');
+            const userInput = inputField.value.trim().toLowerCase();
+
+            if (userInput === currentWord.toLowerCase()) {
+                if (firstAttempt) {
+                    await recordTestResult(true);
+                    document.getElementById('wordDisplay').textContent = currentWord;
+                    wordTestProgress.textContent = '准备下一个单词';
+                    document.getElementById('nextButton').disabled = false;
+                } else {
+                    wordTestProgress.textContent = `完成第${3 - retestCount}次测试，还有${retestCount}次`;
+                    document.getElementById('wordDisplay').textContent = currentWord;
+                    retestCount--;
+                    if (retestCount === 0) {
+                        document.getElementById('nextButton').disabled = false;
+                    }
+                }
+            } else {
+                if (firstAttempt) {
+                    await recordTestResult(false);
+                    retestCount = 3;
+                    firstAttempt = false;
+                    wordTestProgress.textContent = '错误，再测试3次';
+                } else {
+                    wordTestProgress.textContent = '拼写不正确，继续尝试';
+                }
+                inputField.value = '';
+                inputField.focus();
+            }
+        }
+
+        async function recordTestResult(isCorrect) {
+            const word = todayTestList[currentWordIndex];
+            const resultRef = ref(database, `TestResult/${word.id}`);
+            const snapshot = await get(resultRef);
+            let newReviewAttempt = 1;
+
+            if (snapshot.exists()) {
+                const testResult = snapshot.val();
+                const currentReviewAttempt = testResult.review_attempt || 0;
+                newReviewAttempt = isCorrect ? currentReviewAttempt + 1 : currentReviewAttempt;
+            }
+
+            await update(resultRef, {
+                test_result: isCorrect,
+                exam_id: todayExamId,
+                review_attempt: newReviewAttempt
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>
