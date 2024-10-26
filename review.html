@@ -17,10 +17,18 @@
         th, td {
             border: 1px solid #ddd;
             padding: 8px;
-            text-align: center;
+            text-align: left;
         }
         th {
             background-color: #f2f2f2;
+        }
+        .word-column, .input-column {
+            width: 20ch;
+            text-align: left;
+        }
+        .result-column {
+            width: 15ch;
+            text-align: left;
         }
         .hidden-word {
             cursor: pointer;
@@ -38,12 +46,6 @@
             font-size: 18px;
             display: none;
         }
-        footer {
-            text-align: center;
-            font-size: 12px;
-            color: grey;
-            margin-top: 50px;
-        }
     </style>
 </head>
 <body>
@@ -52,8 +54,9 @@
     <table id="wordTable">
         <thead>
             <tr>
-                <th>ID</th>
+                <th>序列号</th>
                 <th>单词</th>
+                <th>状态</th>
                 <th>播放</th>
                 <th>拼写</th>
                 <th>复习结果</th>
@@ -64,8 +67,6 @@
         </tbody>
     </table>
     <button id="startTestButton" class="floating-button">开始测试</button>
-
-    <footer>version 001</footer>
 
     <script type="module">
         import { database } from './firebaseConfig.js';
@@ -90,7 +91,7 @@
 
             document.getElementById('title').textContent = `第${todayExamId}次复习，继续加油`;
 
-            // 假设 todayWordList 从 index.html 传递，或者通过缓存等方式存储
+            // 从 localStorage 获取 todayWordList
             todayWordList = JSON.parse(localStorage.getItem("todayWordList")) || [];
 
             renderTable();
@@ -103,16 +104,24 @@
             todayWordList.forEach((word, index) => {
                 const row = document.createElement('tr');
 
-                const idCell = document.createElement('td');
-                idCell.textContent = word.id;
-                row.appendChild(idCell);
+                // 序列号列
+                const indexCell = document.createElement('td');
+                indexCell.textContent = index + 1;
+                row.appendChild(indexCell);
 
+                // 单词列
                 const wordCell = document.createElement('td');
                 wordCell.textContent = word.word;
-                wordCell.classList.add('word-cell');
+                wordCell.classList.add('word-column');
                 wordCell.dataset.word = word.word;
                 row.appendChild(wordCell);
 
+                // 状态列
+                const statusCell = document.createElement('td');
+                statusCell.textContent = word.status;
+                row.appendChild(statusCell);
+
+                // 播放按钮列
                 const playCell = document.createElement('td');
                 const playButton = document.createElement('button');
                 playButton.textContent = "播放";
@@ -120,7 +129,9 @@
                 playCell.appendChild(playButton);
                 row.appendChild(playCell);
 
+                // 拼写输入框列
                 const inputCell = document.createElement('td');
+                inputCell.classList.add('input-column');
                 if (index < maxWordN) {
                     const inputField = document.createElement('input');
                     inputField.type = 'text';
@@ -131,8 +142,9 @@
                 }
                 row.appendChild(inputCell);
 
+                // 复习结果列
                 const resultCell = document.createElement('td');
-                resultCell.classList.add('result-cell');
+                resultCell.classList.add('result-column');
                 row.appendChild(resultCell);
 
                 tableBody.appendChild(row);
@@ -157,10 +169,10 @@
         function handleKeyPress(e, inputField, wordCell, word, row, index) {
             if (e.key === 'Enter') {
                 if (inputField.value.toLowerCase() === word.toLowerCase()) {
-                    row.querySelector('.result-cell').textContent = '正确';
+                    row.querySelector('.result-column').textContent = '正确';
                     moveToNextInput(index + 1);
                 } else {
-                    row.querySelector('.result-cell').textContent = '错误，再尝试';
+                    row.querySelector('.result-column').textContent = '错误，再尝试';
                     inputField.value = '';
                     inputField.focus();
                 }
@@ -176,7 +188,7 @@
         }
 
         function checkCompletion() {
-            const allCorrect = Array.from(document.querySelectorAll('.result-cell'))
+            const allCorrect = Array.from(document.querySelectorAll('.result-column'))
                 .slice(0, maxWordN)
                 .every(cell => cell.textContent === '正确');
 
