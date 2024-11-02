@@ -1,5 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
-import { getFirestore, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
 // Firebase 配置
 export const firebaseConfig = {
@@ -14,14 +14,8 @@ export const firebaseConfig = {
 
 // 初始化 Firebase
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);  // Ensure `db` is exported
 
-// 启用离线持久性
-enableIndexedDbPersistence(db)
-    .catch((err) => {
-        if (err.code === 'failed-precondition') {
-            console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-        } else if (err.code === 'unimplemented') {
-            console.warn('The current browser does not support all of the features required to enable persistence');
-        }
-    });
+// 初始化 Firestore with caching enabled
+export const db = initializeFirestore(app, {
+    cache: persistentLocalCache()
+});
