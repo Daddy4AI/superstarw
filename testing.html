@@ -44,7 +44,7 @@
     <h2 id="progressTitle"></h2>
 
     <div class="buttons">
-        <button id="playSoundButton" onclick="playCurrentWord()">Play Sound</button>
+        <button id="playSoundButton">Play Sound</button>
         <button id="nextWordButton" onclick="loadNextWord()" disabled>Next Word</button>
     </div>
 
@@ -187,6 +187,8 @@
         document.getElementById("wordDisplay").onclick = () => {
             document.getElementById("wordDisplay").textContent = currentWord.word;
         };
+
+        document.getElementById("playSoundButton").addEventListener("click", playCurrentWord);
 
         document.getElementById("inputField").addEventListener("focus", resetWordDisplay);
 
