@@ -245,8 +245,8 @@
 
         window.addEventListener('load', () => {
             console.log('Page loaded. Running initial setup...');
-            initialSetup();
-            loadTodayWords();
+            await initialSetup(); // Wait for initialSetup() to complete
+            loadTodayWords(); // Run loadTodayWords() after initialSetup() finishes
         });
 
         document.getElementById('viewWordsButton').addEventListener('click', loadTodayWords);
