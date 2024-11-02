@@ -69,36 +69,32 @@
     <button id="startTestButton" class="floating-button">开始测试</button>
 
     <script type="module">
-        import { db } from './firebaseConfig.js';
-        import { doc, getDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+        import { database } from './firebaseConfig.js';
+        import { ref, get } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 
         let todayWordList = [];
         let maxWordN = 10;
         let todayExamId = 0;
 
         async function initPage() {
-            try {
-                // 获取 examSettings 的 maxWordN 设置
-                const maxWordNDoc = await getDoc(doc(db, 'examSettings', 'maxWordN'));
-                if (maxWordNDoc.exists()) {
-                    maxWordN = maxWordNDoc.data().maxWordN || 10;
-                }
-
-                // 获取今天的 examId
-                const examSnapshot = await getDocs(collection(db, 'examList'));
-                if (!examSnapshot.empty) {
-                    todayExamId = Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
-                }
-
-                document.getElementById('title').textContent = `第${todayExamId}次复习，继续加油`;
-
-                // 从 localStorage 获取 todayWordList
-                todayWordList = JSON.parse(localStorage.getItem("todayWordList")) || [];
-
-                renderTable();
-            } catch (error) {
-                console.error("Error initializing page:", error);
+            const examSettingsRef = ref(database, 'examSettings');
+            const examRef = ref(database, 'Examlist');
+            const snapshot = await get(examSettingsRef);
+            if (snapshot.exists()) {
+                maxWordN = snapshot.val().maxWordN || 10;
             }
+
+            const examSnapshot = await get(examRef);
+            if (examSnapshot.exists()) {
+                todayExamId = Math.max(...Object.values(examSnapshot.val()).map(exam => exam.exam_id)) + 1;
+            }
+
+            document.getElementById('title').textContent = `第${todayExamId}次复习，继续加油`;
+
+            // 从 localStorage 获取 todayWordList
+            todayWordList = JSON.parse(localStorage.getItem("todayWordList")) || [];
+
+            renderTable();
         }
 
         function renderTable() {

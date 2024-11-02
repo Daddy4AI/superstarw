@@ -75,9 +75,9 @@
     </footer>
 
     <script type="module">
-        // 从 firebaseConfig.js 导入 firebaseConfig 和 database
-        import { firebaseConfig, database } from './firebaseConfig.js';
-        import { ref, set, remove, get, child } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+        // 从 firebaseConfig.js 导入 db (Firestore 实例)
+        import { db } from './firebaseConfig.js';
+        import { doc, setDoc, deleteDoc, getDocs, collection, query } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
         // 获取香港时间
         const getHongKongTime = () => {
@@ -89,7 +89,7 @@
         };
 
         // 上传单词逻辑
-        document.getElementById('uploadWordsButton').addEventListener('click', function() {
+        document.getElementById('uploadWordsButton').addEventListener('click', async function() {
             const file = document.getElementById('uploadFile').files[0];
             if (file) {
                 const reader = new FileReader();
@@ -103,22 +103,23 @@
                 progressBar.innerHTML = '0%';
                 statusMessage.style.display = 'none';
 
-                reader.onload = function(event) {
+                reader.onload = async function(event) {
                     const text = event.target.result;
                     const words = d3.csvParse(text); // 解析CSV文件
 
                     let totalWords = words.length;
                     let uploadedWords = 0;
 
-                    words.forEach((word, index) => {
-                        // 检查 word.Word 是否为空或未定义
+                    for (let index = 0; index < words.length; index++) {
+                        const word = words[index];
                         if (word.Word && word.Word.trim() !== '') {
-                            const wordId = Date.now() + index; // 防止重复ID
-                            set(ref(database, 'wordlist/' + wordId), {
-                                id: wordId,
-                                word: word.Word,
-                                created_at: getHongKongTime()  // 使用香港时间
-                            }).then(() => {
+                            const wordId = Date.now() + index; // 确保唯一ID
+                            try {
+                                await setDoc(doc(db, 'wordlist', wordId.toString()), {
+                                    id: wordId,
+                                    word: word.Word,
+                                    created_at: getHongKongTime()
+                                });
                                 uploadedWords++;
                                 // 更新进度条
                                 let progress = Math.floor((uploadedWords / totalWords) * 100);
@@ -131,16 +132,16 @@
                                     statusMessage.style.color = 'green';
                                     statusMessage.innerHTML = '单词已成功上传!';
                                 }
-                            }).catch((error) => {
+                            } catch (error) {
                                 // 如果出现错误，显示错误信息
                                 statusMessage.style.display = 'block';
                                 statusMessage.style.color = 'red';
                                 statusMessage.innerHTML = '上传失败，请重试。错误信息: ' + error.message;
-                            });
+                            }
                         } else {
                             console.log(`跳过空白单词在第 ${index + 1} 行`);
                         }
-                    });
+                    }
                 };
 
                 // 开始读取文件
@@ -151,39 +152,40 @@
         });
 
         // 清空 wordlist 逻辑
-        document.getElementById('clearWordsButton').addEventListener('click', function() {
+        document.getElementById('clearWordsButton').addEventListener('click', async function() {
             if (confirm('确定要清空所有单词吗？这将无法恢复。')) {
-                remove(ref(database, 'wordlist')).then(() => {
+                try {
+                    const wordListQuery = await getDocs(collection(db, 'wordlist'));
+                    wordListQuery.forEach(async (doc) => {
+                        await deleteDoc(doc.ref);
+                    });
                     alert('单词列表已清空。');
-                }).catch((error) => {
+                } catch (error) {
                     alert('清空单词列表失败: ' + error.message);
-                });
+                }
             }
         });
 
         // 读取并显示当前的 maxWordN 值
-        const loadMaxWordN = () => {
-            const maxWordNRef = ref(database, 'examSettings/maxWordN');
-            get(maxWordNRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const currentMaxWordN = snapshot.val();
+        const loadMaxWordN = async () => {
+            const maxWordNQuery = await getDocs(collection(db, 'examSettings'));
+            maxWordNQuery.forEach((doc) => {
+                const currentMaxWordN = doc.data().maxWordN;
+                if (currentMaxWordN) {
                     document.getElementById('maxWordN').value = currentMaxWordN;  // 设置下拉框的值
-                } else {
-                    console.log('没有找到 maxWordN 的设置，使用默认值 5');
                 }
-            }).catch((error) => {
-                console.error('加载 maxWordN 时出错:', error);
             });
         };
 
         // 保存 maxWordN 的选择
-        document.getElementById('saveMaxWordNButton').addEventListener('click', function() {
+        document.getElementById('saveMaxWordNButton').addEventListener('click', async function() {
             const selectedMaxWordN = document.getElementById('maxWordN').value;
-            set(ref(database, 'examSettings/maxWordN'), selectedMaxWordN).then(() => {
+            try {
+                await setDoc(doc(db, 'examSettings', 'maxWordN'), { maxWordN: selectedMaxWordN });
                 alert('已保存测试单词数量设置：' + selectedMaxWordN);
-            }).catch((error) => {
+            } catch (error) {
                 alert('保存设置时出错：' + error.message);
-            });
+            }
         });
 
         // 页面加载时读取 maxWordN 设置
