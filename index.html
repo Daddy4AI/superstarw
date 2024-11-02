@@ -42,7 +42,7 @@
 
     <div id="wordListContainer"></div>
 
-    <footer>version 001</footer>
+    <footer>version 002</footer>
 
     <script type="module">
         import { database } from './firebaseConfig.js';
@@ -71,23 +71,25 @@
                     throw new Error('Wordlist 不存在');
                 }
 
-                // 检查 TestResult 是否存在，如果不存在，初始化 TestResult 数据库
-                const testResultRef = ref(database, 'TestResult');
+                
+                // 检查 TestResult 是否存在，如果不存在，创建一条记录
+                const testResultRef = ref(database, 'TestResult/0'); // 指向具体路径 'TestResult/0'
                 const testResultSnapshot = await get(testResultRef);
                 if (!testResultSnapshot.exists()) {
-                console.warn('TestResult 不存在，正在创建初始记录...');
-                const initialRecord = {
-                    id: 0,
-                    word_id: 0,
-                    exam_id: 0,
-                    test_result: false,
-                    test_attempt: 0,
-                    review_attempt: 0
-                };
-
-                    await set(testResultRef, initialTestResults);
-                    console.log('TestResult 数据库已初始化');
+                    console.warn('TestResult 不存在，正在创建初始记录...');
+                    const initialRecord = {
+                        id: 0,
+                        word_id: 0,
+                        exam_id: 0,
+                        test_result: false,
+                        test_attempt: 0,
+                        review_attempt: 0
+                    };
+                    await set(testResultRef, initialRecord); // 创建具体记录
+                    console.log('TestResult 初始记录已创建');
                 }
+
+                
 
                 // 检查 examList 是否存在，如果不存在，初始化 examList 数据库
                 const examListRef = ref(database, 'examList');
