@@ -1,5 +1,5 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
-import { getDatabase } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.4.1/firebase-app.js';
+import { getDatabase } from 'https://www.gstatic.com/firebasejs/9.4.1/firebase-database.js';
 
 
 // Firebase 配置
