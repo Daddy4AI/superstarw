@@ -14,16 +14,14 @@ export const firebaseConfig = {
 
 // 初始化 Firebase
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+export const db = getFirestore(app);  // Ensure `db` is exported
 
 // 启用离线持久性
 enableIndexedDbPersistence(db)
     .catch((err) => {
         if (err.code === 'failed-precondition') {
-            // 多个选项卡打开时，只能在一个选项卡中启用持久性
             console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
         } else if (err.code === 'unimplemented') {
-            // 当前浏览器不支持所有必要的功能
             console.warn('The current browser does not support all of the features required to enable persistence');
         }
     });
