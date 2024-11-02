@@ -51,7 +51,7 @@
     <div class="word-display" id="wordDisplay">**********</div>
     <div class="progress-display" id="wordTestProgress">测试状态</div>
 
-    <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off" onfocus="resetWordDisplay()">
+    <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off">
 
     <div class="footer">version 001</div>
 
@@ -141,7 +141,7 @@
                     document.getElementById("wordTestProgress").textContent = `完成第${retestCount}次测试，还有${3 - retestCount}次`;
                     inputField.value = "";
                     inputField.focus();
-                    
+
                     if (retestCount >= 3) {
                         document.getElementById("nextWordButton").disabled = false;
                     }
@@ -187,6 +187,8 @@
         document.getElementById("wordDisplay").onclick = () => {
             document.getElementById("wordDisplay").textContent = currentWord.word;
         };
+
+        document.getElementById("inputField").addEventListener("focus", resetWordDisplay);
 
         document.getElementById("inputField").addEventListener("keypress", (e) => {
             if (e.key === 'Enter') {
