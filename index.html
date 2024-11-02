@@ -44,17 +44,26 @@
 
     <div id="wordListContainer"></div>
 
-    <footer>version 003</footer>
+    <footer>version 004</footer>
 
     <script type="module">
-        import { database } from './firebaseConfig.js';
-        import { ref, set, get } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js';
+        import { db } from './firebaseConfig.js';
+        import { doc, setDoc, getDoc, collection, getDocs, query, where, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+
+        // Enable offline persistence
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+            } else if (err.code === 'unimplemented') {
+                console.log('The current browser does not support all of the features required to enable persistence');
+            }
+        });
 
         async function getMaxWordN() {
             try {
-                const settingsRef = ref(database, 'examSettings/maxWordN');
-                const snapshot = await get(settingsRef);
-                return snapshot.exists() ? snapshot.val() : 25;  // 默认 25
+                const docRef = doc(db, 'examSettings', 'maxWordN');
+                const snapshot = await getDoc(docRef);
+                return snapshot.exists() ? snapshot.data().maxWordN : 25;  // 默认 25
             } catch (error) {
                 console.error('获取 maxWordN 时出错:', error);
                 return 25;
@@ -63,24 +72,20 @@
 
         async function initialSetup() {
             try {
-
                 console.log('Starting initial setup...');
 
                 // 检查 wordlist 是否存在
-                const wordlistRef = ref(database, 'wordlist');
-                const wordlistSnapshot = await get(wordlistRef);
-                
-                if (!wordlistSnapshot.exists()) {
+                const wordlistSnapshot = await getDocs(collection(db, 'wordlist'));
+                if (wordlistSnapshot.empty) {
                     document.getElementById('setupMessage').style.display = 'none';
                     document.getElementById('errorMessage').textContent = '没有单词清单，请上传需要复习的单词';
                     document.getElementById('errorMessage').style.display = 'block';
                     throw new Error('Wordlist 不存在');
                 }
 
+                const testResultRef = doc(db, 'testResult', '0');
+                const testResultSnapshot = await getDoc(testResultRef);
 
-                const testResultRef = ref(database, 'testResult/0');
-                const testResultSnapshot = await get(testResultRef);
-        
                 if (!testResultSnapshot.exists()) {
                     console.warn('TestResult 不存在，正在创建初始记录...');
                     const initialRecord = {
@@ -91,15 +96,15 @@
                         test_attempt: 0,
                         review_attempt: 0
                     };
-                    await set(testResultRef, initialRecord);
+                    await setDoc(testResultRef, initialRecord);
                     console.log('testResult 初始记录已创建');
                 } else {
                     console.log('testResult 已存在，无需创建。');
                 }
 
                 // 检查 examList 是否存在，如果不存在，初始化 examList 数据库
-                const examListRef = ref(database, 'examList');
-                const examListSnapshot = await get(examListRef);
+                const examListRef = doc(db, 'examList', '0');
+                const examListSnapshot = await getDoc(examListRef);
                 if (!examListSnapshot.exists()) {
                     console.warn('examList 不存在，正在初始化...');
                     const initialExam = {
@@ -108,7 +113,7 @@
                         exam_time_start: new Date().toISOString(),
                         exam_time_end: null
                     };
-                    await set(examListRef, { 0: initialExam });
+                    await setDoc(examListRef, initialExam);
                     console.log('examList 数据库已初始化');
                 }
 
@@ -117,8 +122,6 @@
                 console.error('初始设置失败:', error);
             }
         }
-
-
 
         function setWordStatus(word, result) {
             if (!result || result.test_attempt === 0) {
@@ -133,22 +136,24 @@
         }
 
         async function loadTodayWords() {
-            const maxWordN = await getMaxWordN();  // 动态获取 maxWordN
+            const maxWordN = await getMaxWordN();
             const todayWordList = [];
 
             const [wordSnapshot, testResultSnapshot] = await Promise.all([
-                get(ref(database, 'wordlist')),
-                get(ref(database, 'TestResult'))
+                getDocs(collection(db, 'wordlist')),
+                getDocs(collection(db, 'testResult'))
             ]);
 
-            if (!wordSnapshot.exists() || !testResultSnapshot.exists()) {
+            if (wordSnapshot.empty || testResultSnapshot.empty) {
                 console.error('No wordlist or test results found.');
                 return;
             }
 
-            const words = wordSnapshot.val();
-            const testResults = testResultSnapshot.val();
-            const wordArray = Object.values(words);
+            const words = wordSnapshot.docs.map(doc => doc.data());
+            const testResults = {};
+            testResultSnapshot.forEach(doc => {
+                testResults[doc.id] = doc.data();
+            });
 
             function addWordsToList(filteredWords) {
                 const remainingSlots = maxWordN - todayWordList.length;
@@ -157,7 +162,7 @@
 
             const todayExamId = Math.max(...Object.values(testResults).map(r => r.exam_id)) + 1;
 
-            const YWWord = wordArray.filter(word => {
+            const YWWord = words.filter(word => {
                 const result = testResults[word.id];
                 word.status = setWordStatus(word, result);
                 return (
@@ -169,7 +174,7 @@
             });
             addWordsToList(YWWord);
 
-            const R2Word = wordArray.filter(word => {
+            const R2Word = words.filter(word => {
                 const result = testResults[word.id];
                 word.status = setWordStatus(word, result);
                 return (
@@ -180,7 +185,7 @@
             });
             addWordsToList(R2Word);
 
-            const R6Word = wordArray.filter(word => {
+            const R6Word = words.filter(word => {
                 const result = testResults[word.id];
                 word.status = setWordStatus(word, result);
                 return (
@@ -191,7 +196,7 @@
             });
             addWordsToList(R6Word);
 
-            const R13Word = wordArray.filter(word => {
+            const R13Word = words.filter(word => {
                 const result = testResults[word.id];
                 word.status = setWordStatus(word, result);
                 return (
@@ -202,7 +207,7 @@
             });
             addWordsToList(R13Word);
 
-            const R20Word = wordArray.filter(word => {
+            const R20Word = words.filter(word => {
                 const result = testResults[word.id];
                 word.status = setWordStatus(word, result);
                 return (
@@ -214,7 +219,7 @@
             addWordsToList(R20Word);
 
             if (todayWordList.length < maxWordN) {
-                const untestedWords = wordArray.filter(word =>
+                const untestedWords = words.filter(word =>
                     !testResults[word.id] || testResults[word.id].test_attempt === 0
                 );
                 untestedWords.forEach(word => {
@@ -225,9 +230,8 @@
 
             displayWords(todayWordList);
 
-                // 保存 todayWordList 到 localStorage
+            // 保存 todayWordList 到 localStorage
             localStorage.setItem("todayWordList", JSON.stringify(todayWordList));
-
         }
 
         function displayWords(wordList) {
@@ -248,11 +252,10 @@
             }
         }
 
-        // Ensure the initialSetup function is defined or imported above this block
-
         window.addEventListener('load', () => {
             console.log('Page loaded. Running initial setup...');
             initialSetup();
+            loadTodayWords();
         });
 
         document.getElementById('viewWordsButton').addEventListener('click', loadTodayWords);
@@ -264,8 +267,6 @@
         document.getElementById('testWordsButton').addEventListener('click', () => {
             window.location.href = "testing.html";
         });
-
-        window.addEventListener('load', loadTodayWords);
     </script>
 </body>
 </html>
