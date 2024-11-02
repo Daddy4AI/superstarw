@@ -35,6 +35,8 @@
 </head>
 <body>
     <h1>Build a Strong Vocabulary</h1>
+    <div id="setupMessage" style="display: none;">Initializing...</div>
+    <div id="errorMessage" style="display: none; color: red;"></div>
 
     <button id="viewWordsButton">查看</button>
     <button id="reviewWordsButton">复习</button>
@@ -42,7 +44,7 @@
 
     <div id="wordListContainer"></div>
 
-    <footer>version 002</footer>
+    <footer>version 001</footer>
 
     <script type="module">
         import { database } from './firebaseConfig.js';
