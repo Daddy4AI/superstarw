@@ -243,7 +243,7 @@
             }
         }
 
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => { // Add `async` here
             console.log('Page loaded. Running initial setup...');
             await initialSetup(); // Wait for initialSetup() to complete
             loadTodayWords(); // Run loadTodayWords() after initialSetup() finishes
