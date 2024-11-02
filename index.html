@@ -59,6 +59,58 @@
             }
         }
 
+        async function initialSetup() {
+            try {
+                // 检查 wordlist 是否存在
+                const wordlistRef = ref(database, 'wordlist');
+                const wordlistSnapshot = await get(wordlistRef);
+                if (!wordlistSnapshot.exists()) {
+                    document.getElementById('setupMessage').style.display = 'none';
+                    document.getElementById('errorMessage').textContent = '没有单词清单，请上传需要复习的单词';
+                    document.getElementById('errorMessage').style.display = 'block';
+                    throw new Error('Wordlist 不存在');
+                }
+
+                // 检查 TestResult 是否存在，如果不存在，初始化 TestResult 数据库
+                const testResultRef = ref(database, 'TestResult');
+                const testResultSnapshot = await get(testResultRef);
+                if (!testResultSnapshot.exists()) {
+                    console.warn('TestResult 不存在，正在初始化...');
+                    const wordlist = wordlistSnapshot.val();
+                    const initialTestResults = {};
+                    Object.keys(wordlist).forEach((wordId, index) => {
+                        initialTestResults[wordId] = {
+                            id: wordId,
+                            test_result: false,
+                            test_attempt: 0,
+                            review_attempt: 0
+                        };
+                    });
+                    await set(testResultRef, initialTestResults);
+                    console.log('TestResult 数据库已初始化');
+                }
+
+                // 检查 examList 是否存在，如果不存在，初始化 examList 数据库
+                const examListRef = ref(database, 'examList');
+                const examListSnapshot = await get(examListRef);
+                if (!examListSnapshot.exists()) {
+                    console.warn('examList 不存在，正在初始化...');
+                    const initialExam = {
+                        id: 0,
+                        exam_id: 0,
+                        exam_time_start: new Date().toISOString(),
+                        exam_time_end: null
+                    };
+                    await set(examListRef, { 0: initialExam });
+                    console.log('examList 数据库已初始化');
+                }
+
+                document.getElementById('setupMessage').textContent = '系统初始设置完成，您可以开始使用系统';
+            } catch (error) {
+                console.error('初始设置失败:', error);
+            }
+        }
+
         function setWordStatus(word, result) {
             if (!result || result.test_attempt === 0) {
                 if (!result || result.review_attempt === 0) {
