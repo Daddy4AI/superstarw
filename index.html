@@ -78,7 +78,7 @@
                 }
 
 
-                const testResultRef = ref(database, 'TestResult/0');
+                const testResultRef = ref(database, 'testResult/0');
                 const testResultSnapshot = await get(testResultRef);
         
                 if (!testResultSnapshot.exists()) {
@@ -92,9 +92,9 @@
                         review_attempt: 0
                     };
                     await set(testResultRef, initialRecord);
-                    console.log('TestResult 初始记录已创建');
+                    console.log('testResult 初始记录已创建');
                 } else {
-                    console.log('TestResult 已存在，无需创建。');
+                    console.log('testResult 已存在，无需创建。');
                 }
 
                 // 检查 examList 是否存在，如果不存在，初始化 examList 数据库
