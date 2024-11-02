@@ -139,7 +139,9 @@
                 } else {
                     retestCount++;
                     document.getElementById("wordTestProgress").textContent = `完成第${retestCount}次测试，还有${3 - retestCount}次`;
-
+                    inputField.value = "";
+                    inputField.focus();
+                    
                     if (retestCount >= 3) {
                         document.getElementById("nextWordButton").disabled = false;
                     }
