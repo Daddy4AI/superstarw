@@ -44,20 +44,11 @@
 
     <div id="wordListContainer"></div>
 
-    <footer>version 004</footer>
+    <footer>version 005</footer>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
-        import { doc, setDoc, getDoc, collection, getDocs, query, where, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
-
-        // Enable offline persistence
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-            } else if (err.code === 'unimplemented') {
-                console.log('The current browser does not support all of the features required to enable persistence');
-            }
-        });
+        import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
         async function getMaxWordN() {
             try {
