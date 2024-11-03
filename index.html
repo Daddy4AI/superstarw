@@ -44,7 +44,7 @@
 
     <div id="wordListContainer"></div>
 
-    <footer>version 001</footer>
+    <footer>version 005</footer>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
@@ -56,7 +56,7 @@
                 const snapshot = await getDoc(docRef);
                 return snapshot.exists() ? snapshot.data().maxWordN : 25;  // 默认 25
             } catch (error) {
-                console.error('获取 maxWordN 时出错:', error);
+                console.error('Error fetching maxWordN:', error);
                 return 25;
             }
         }
@@ -65,39 +65,37 @@
             try {
                 console.log('Starting initial setup...');
 
-                // 检查 wordlist 是否存在
+                // Check if 'wordlist' collection exists
                 const wordlistSnapshot = await getDocs(collection(db, 'wordlist'));
                 if (wordlistSnapshot.empty) {
                     document.getElementById('setupMessage').style.display = 'none';
                     document.getElementById('errorMessage').textContent = '没有单词清单，请上传需要复习的单词';
                     document.getElementById('errorMessage').style.display = 'block';
-                    throw new Error('Wordlist 不存在');
+                    throw new Error('Wordlist not found');
                 }
 
+                // Check if 'testResult' collection exists and create an initial document if not
                 const testResultRef = doc(db, 'testResult', '0');
                 const testResultSnapshot = await getDoc(testResultRef);
-
                 if (!testResultSnapshot.exists()) {
-                    console.warn('TestResult 不存在，正在创建初始记录...');
+                    console.warn('testResult not found, creating initial record...');
                     const initialRecord = {
                         id: 0,
-                        word_id: 0,
-                        exam_id: 0,
-                        test_result: false,
-                        test_attempt: 0,
-                        review_attempt: 0
+                        review_attempt: 0,
+                        last_exam_id: 0,
+                        test_attempts: []
                     };
                     await setDoc(testResultRef, initialRecord);
-                    console.log('testResult 初始记录已创建');
+                    console.log('Initial testResult record created');
                 } else {
-                    console.log('testResult 已存在，无需创建。');
+                    console.log('testResult exists, no need to create.');
                 }
 
-                // 检查 examList 是否存在，如果不存在，初始化 examList 数据库
+                // Check if 'examList' collection exists and create an initial document if not
                 const examListRef = doc(db, 'examList', '0');
                 const examListSnapshot = await getDoc(examListRef);
                 if (!examListSnapshot.exists()) {
-                    console.warn('examList 不存在，正在初始化...');
+                    console.warn('examList not found, initializing...');
                     const initialExam = {
                         id: 0,
                         exam_id: 0,
@@ -105,17 +103,17 @@
                         exam_time_end: null
                     };
                     await setDoc(examListRef, initialExam);
-                    console.log('examList 数据库已初始化');
+                    console.log('examList initialized');
                 }
 
                 document.getElementById('setupMessage').textContent = '系统初始设置完成，您可以开始使用系统';
             } catch (error) {
-                console.error('初始设置失败:', error);
+                console.error('Initial setup failed:', error);
             }
         }
 
         function setWordStatus(word, result) {
-            if (!result || result.test_attempt === 0) {
+            if (!result || result.test_attempts.length === 0) {
                 if (!result || result.review_attempt === 0) {
                     return "新单词";
                 }
@@ -130,6 +128,7 @@
             const maxWordN = await getMaxWordN();
             const todayWordList = [];
 
+            // Get all documents from the wordlist and testResult collections
             const [wordSnapshot, testResultSnapshot] = await Promise.all([
                 getDocs(collection(db, 'wordlist')),
                 getDocs(collection(db, 'testResult'))
@@ -151,16 +150,19 @@
                 todayWordList.push(...filteredWords.slice(0, remainingSlots));
             }
 
-            const todayExamId = Math.max(...Object.values(testResults).map(r => r.exam_id)) + 1;
+            // Get today's exam ID
+            const todayExamId = Math.max(...Object.values(testResults).map(r => r.last_exam_id || 0)) + 1;
 
+            // Filter words based on the updated testResult structure
             const YWWord = words.filter(word => {
                 const result = testResults[word.id];
                 word.status = setWordStatus(word, result);
                 return (
                     result &&
                     result.review_attempt === 0 &&
-                    result.exam_id === todayExamId - 1 &&
-                    result.test_result === false
+                    result.last_exam_id === todayExamId - 1 &&
+                    result.test_attempts.length > 0 &&
+                    result.test_attempts[result.test_attempts.length - 1].test_result === false
                 );
             });
             addWordsToList(YWWord);
@@ -171,7 +173,7 @@
                 return (
                     result &&
                     result.review_attempt === 1 &&
-                    result.exam_id <= todayExamId - 2
+                    result.last_exam_id <= todayExamId - 2
                 );
             });
             addWordsToList(R2Word);
@@ -182,7 +184,7 @@
                 return (
                     result &&
                     result.review_attempt === 2 &&
-                    result.exam_id <= todayExamId - 6
+                    result.last_exam_id <= todayExamId - 6
                 );
             });
             addWordsToList(R6Word);
@@ -193,7 +195,7 @@
                 return (
                     result &&
                     result.review_attempt === 3 &&
-                    result.exam_id <= todayExamId - 13
+                    result.last_exam_id <= todayExamId - 13
                 );
             });
             addWordsToList(R13Word);
@@ -204,15 +206,16 @@
                 return (
                     result &&
                     result.review_attempt === 4 &&
-                    result.exam_id <= todayExamId - 20
+                    result.last_exam_id <= todayExamId - 20
                 );
             });
             addWordsToList(R20Word);
 
             if (todayWordList.length < maxWordN) {
-                const untestedWords = words.filter(word =>
-                    !testResults[word.id] || testResults[word.id].test_attempt === 0
-                );
+                const untestedWords = words.filter(word => {
+                    const result = testResults[word.id];
+                    return !result || (!result.test_attempts || result.test_attempts.length === 0);
+                });
                 untestedWords.forEach(word => {
                     word.status = "新单词";
                 });
@@ -221,7 +224,7 @@
 
             displayWords(todayWordList);
 
-            // 保存 todayWordList 到 localStorage
+            // Save todayWordList to localStorage
             localStorage.setItem("todayWordList", JSON.stringify(todayWordList));
         }
 
@@ -243,10 +246,7 @@
             }
         }
 
-        window.addEventListener('load', async () => { // Add `async` here
             console.log('Page loaded. Running initial setup...');
-            await initialSetup(); // Wait for initialSetup() to complete
-            loadTodayWords(); // Run loadTodayWords() after initialSetup() finishes
         });
 
         document.getElementById('viewWordsButton').addEventListener('click', loadTodayWords);
