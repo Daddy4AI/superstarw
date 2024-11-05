@@ -119,6 +119,7 @@
                 // 将 todayExamId 保存到 localStorage
                 localStorage.setItem('todayExamId', todayExamId);
 
+                document.getElementById('title').textContent = `好好预习，今天是第${todayExamId}次测试`;
 
             } catch (error) {
                 console.error('Initial setup failed:', error);
