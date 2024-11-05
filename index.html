@@ -44,32 +44,28 @@
 
     <div id="wordListContainer"></div>
 
-    <footer>version 007</footer>
+    <footer>version 001</footer>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
         import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
-        async function getMaxWordN() {
-            try {
-                const docRef = doc(db, 'examSettings', 'maxWordN');
-                const snapshot = await getDoc(docRef);
-                return snapshot.exists() ? snapshot.data().maxWordN : 25;  // 默认 25
-            } catch (error) {
-                console.error('Error fetching maxWordN:', error);
-                return 25;
-            }
 
-            // 将 maxWordN 保存到 localStorage
-            localStorage.setItem('maxWordN', maxWordN);
-
-        }
 
         async function initialSetup() {
             let todayExamId = 0; // 确保在函数顶部声明变量
 
             try {
                 console.log('Starting initial setup...');
+
+            // 获取 examSettings 的 maxWordN 设置
+                const maxWordNDoc = await getDoc(doc(db, 'examSettings', 'maxWordN'));
+                if (maxWordNDoc.exists()) {
+                    maxWordN = maxWordNDoc.data().maxWordN || 25; // 默认 25
+                }
+        
+                // 将 maxWordN 保存到 localStorage
+                localStorage.setItem('maxWordN', maxWordN);
 
                 // Check if 'wordlist' collection exists
                 const wordlistSnapshot = await getDocs(collection(db, 'wordlist'));
