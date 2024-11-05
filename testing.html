@@ -67,65 +67,72 @@
         let retestCount = 0;
 
         async function initPage() {
-            try {
-                // 获取 examSettings 的 maxWordN 设置
-                const maxWordNDoc = await getDoc(doc(db, 'examSettings', 'maxWordN'));
-                if (maxWordNDoc.exists()) {
-                    maxWordN = maxWordNDoc.data().maxWordN || 10;
-                }
-
-                // 获取今天的 exam ID 并创建新的考试记录
-                const examSnapshot = await getDocs(collection(db, 'examList'));
-                todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
-
-                // 创建新的考试记录
-                const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-                await addDoc(collection(db, 'examList'), {
-                    id: Date.now().toString(),
-                    exam_id: todayExamId,
-                    exam_time_start: examTimeStart,
-                    exam_time_end: null
-                });
-
-                document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
-
-                // 从 localStorage 获取 todayTestList
-                todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
-                if (!todayTestList.length) {
-                    alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
-                    return;
-                }
-
-                document.getElementById('loadingMessage').style.display = "none";
-                loadWord();
-            } catch (error) {
-                console.error("Error initializing page:", error);
-            }
+    try {
+        // 获取 examSettings 的 maxWordN 设置
+        const maxWordNDoc = await getDoc(doc(db, 'examSettings', 'maxWordN'));
+        if (maxWordNDoc.exists()) {
+            maxWordN = maxWordNDoc.data().maxWordN || 10;
         }
 
-        async function loadWord() {
-            if (currentWordIndex >= todayTestList.length) {
-                // 记录考试结束时间
-                const examEndTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-                const examListRef = doc(db, 'examList', todayExamId.toString());
-                await updateDoc(examListRef, {
-                    exam_time_end: examEndTime
-                });
+        // 获取今天的 exam ID 并创建新的考试记录
+        const examSnapshot = await getDocs(collection(db, 'examList'));
+        todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
 
-                alert("完成今天的测试");
-                window.location.href = "result.html";
-                return;
-            }
+        // 使用 exam_id 作为文档 ID 创建新的考试记录
+        const examListRef = doc(db, 'examList', todayExamId.toString());
+        const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+        await setDoc(examListRef, {
+            id: todayExamId.toString(),
+            exam_id: todayExamId,
+            exam_time_start: examTimeStart,
+            exam_time_end: null
+        });
 
-            currentWord = todayTestList[currentWordIndex];
-            document.getElementById("progressTitle").textContent = `${currentWordIndex + 1} of ${maxWordN}个单词`;
-            document.getElementById("wordDisplay").textContent = "**********";
-            document.getElementById("wordTestProgress").textContent = "测试状态";
-            document.getElementById("inputField").value = "";
-            retestCount = 0;
+        document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
 
-            playAudio(currentWord.word);
+        // 从 localStorage 获取 todayTestList
+        todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
+        if (!todayTestList.length) {
+            alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
+            return;
         }
+
+        document.getElementById('loadingMessage').style.display = "none";
+        loadWord();
+    } catch (error) {
+        console.error("Error initializing page:", error);
+    }
+}
+
+async function loadWord() {
+    if (currentWordIndex >= todayTestList.length) {
+        // 记录考试结束时间
+        const examEndTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+        const examListRef = doc(db, 'examList', todayExamId.toString());
+        try {
+            await updateDoc(examListRef, {
+                exam_time_end: examEndTime
+            });
+            console.log('考试结束时间已记录');
+        } catch (error) {
+            console.error('Error updating exam end time:', error);
+        }
+
+        alert("完成今天的测试");
+        window.location.href = "result.html";
+        return;
+    }
+
+    currentWord = todayTestList[currentWordIndex];
+    document.getElementById("progressTitle").textContent = `${currentWordIndex + 1} of ${maxWordN}个单词`;
+    document.getElementById("wordDisplay").textContent = "**********";
+    document.getElementById("wordTestProgress").textContent = "测试状态";
+    document.getElementById("inputField").value = "";
+    retestCount = 0;
+
+    playAudio(currentWord.word);
+}
+
 
         async function playAudio(word) {
             const utterance = new SpeechSynthesisUtterance(word);
