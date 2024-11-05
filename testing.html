@@ -53,7 +53,7 @@
 
     <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off">
 
-    <div class="footer">version 001</div>
+    <div class="footer">version 002</div>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
@@ -198,10 +198,13 @@
         }
 
         async function saveTestResult(isCorrect) {
-            const wordRef = doc(db, 'testResult', currentWord.id.toString());
-            const resultSnapshot = await getDoc(wordRef);
-            
-            const currentTimestamp = new Date().toISOString();
+        const wordRef = doc(db, 'testResult', currentWord.id.toString());
+        const currentTimestamp = new Date().toISOString();
+
+        // Run Firestore operations asynchronously without waiting for them to finish
+        (async () => {
+            try {
+                const resultSnapshot = await getDoc(wordRef);
 
             if (resultSnapshot.exists()) {
                 // Update if the document exists
@@ -223,7 +226,7 @@
                     timestamp: currentTimestamp
                 };
 
-                // Update Firestore document
+                // Update Firestore document asynchronously
                 await updateDoc(wordRef, {
                     review_attempt: newReviewId,
                     last_exam_id: todayExamId,
@@ -244,10 +247,15 @@
                     test_attempts: [newAttempt] // Start with the first attempt
                 });
             }
-
-            document.getElementById("wordDisplay").textContent = currentWord.word;
-            document.getElementById("inputField").value = "";
+        } catch (error) {
+            console.error('Error saving test result:', error);
         }
+    })();
+
+    // Continue with other tasks without waiting for the save operation
+    document.getElementById("wordDisplay").textContent = currentWord.word;
+    document.getElementById("inputField").value = "";
+}
 
         function loadNextWord() {
             document.getElementById("nextWordButton").disabled = true;
