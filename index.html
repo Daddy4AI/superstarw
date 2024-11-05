@@ -117,9 +117,15 @@
                 // 获取今天的 exam ID 并创建新的考试记录
                 const examSnapshot = await getDocs(collection(db, 'examList'));
                 todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
+                
 
                 // 将 todayExamId 保存到 localStorage
                 localStorage.setItem('todayExamId', todayExamId);
+
+                // Console log to verify values are stored successfully
+                console.log('maxWordN saved to localStorage:', localStorage.getItem('maxWordN'));
+                console.log('todayExamId saved to localStorage:', localStorage.getItem('todayExamId'));
+
 
                 
             } catch (error) {
