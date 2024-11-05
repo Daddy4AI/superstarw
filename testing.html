@@ -135,7 +135,7 @@
             if (userSpelling === correctSpelling) {
                 if (retestCount === 0) {
                     // First attempt is correct, save the result and move to the next word
-                    await saveTestResult(true);
+                    saveTestResult(true);
                     document.getElementById("wordTestProgress").textContent = "拼写正确！准备下一个单词";
                     document.getElementById("nextWordButton").disabled = false;
 
@@ -172,7 +172,8 @@
             } else {
                 if (retestCount === 0) {
                     // First attempt is incorrect, save the result and increment retest count
-                    await saveTestResult(false);
+                    saveTestResult(false);
+                    inputField.focus();
                     document.getElementById("wordTestProgress").textContent = "拼写错误，再尝试3次";
                     retestCount++;
                 } else if (retestCount < 4) {
