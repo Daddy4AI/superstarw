@@ -53,7 +53,7 @@
 
     <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off">
 
-    <div class="footer">version 004</div>
+    <div class="footer">version 005</div>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
@@ -68,15 +68,19 @@
 
         async function initPage() {
     try {
-        // 获取 examSettings 的 maxWordN 设置
-        const maxWordNDoc = await getDoc(doc(db, 'examSettings', 'maxWordN'));
-        if (maxWordNDoc.exists()) {
-            maxWordN = maxWordNDoc.data().maxWordN || 10;
-        }
 
-        // 获取今天的 exam ID 并创建新的考试记录
-        const examSnapshot = await getDocs(collection(db, 'examList'));
-        todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
+        document.addEventListener('DOMContentLoaded', () => {
+        const maxWordN = localStorage.getItem('maxWordN');
+        const todayExamId = localStorage.getItem('todayExamId');
+
+        if (maxWordN && todayExamId) {
+            console.log(`Max Word Number: ${maxWordN}, Today Exam ID: ${todayExamId}`);
+            // 你可以在页面中使用这些值，例如设置页面标题或进行其他初始化逻辑
+        } else {
+            console.error('Missing maxWordN or todayExamId in localStorage');
+        }
+    });
+
 
         // 使用 exam_id 作为文档 ID 创建新的考试记录
         const examListRef = doc(db, 'examList', todayExamId.toString());

@@ -44,7 +44,7 @@
 
     <div id="wordListContainer"></div>
 
-    <footer>version 006</footer>
+    <footer>version 005</footer>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
@@ -59,10 +59,6 @@
                 console.error('Error fetching maxWordN:', error);
                 return 25;
             }
-
-            // 将 maxWordN 保存到 localStorage
-            localStorage.setItem('maxWordN', maxWordN);
-
         }
 
         async function initialSetup() {
@@ -111,15 +107,6 @@
                 }
 
                 document.getElementById('setupMessage').textContent = '系统初始设置完成，您可以开始使用系统';
-
-                // 获取今天的 exam ID 并创建新的考试记录
-                const examSnapshot = await getDocs(collection(db, 'examList'));
-                todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
-
-                // 将 todayExamId 保存到 localStorage
-                localStorage.setItem('todayExamId', todayExamId);
-
-
             } catch (error) {
                 console.error('Initial setup failed:', error);
             }
