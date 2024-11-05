@@ -53,11 +53,11 @@
 
     <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off">
 
-    <div class="footer">version 004</div>
+    <div class="footer">version 002</div>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
-        import { doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+        import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
         let todayExamId = 0;
         let todayTestList = [];
@@ -74,18 +74,11 @@
                     maxWordN = maxWordNDoc.data().maxWordN || 10;
                 }
 
-                // 获取今天的 exam ID 并创建新的考试记录
+                // 获取今天的 examId
                 const examSnapshot = await getDocs(collection(db, 'examList'));
-                todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
-
-                // 创建新的考试记录
-                const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-                await addDoc(collection(db, 'examList'), {
-                    id: Date.now().toString(),
-                    exam_id: todayExamId,
-                    exam_time_start: examTimeStart,
-                    exam_time_end: null
-                });
+                if (!examSnapshot.empty) {
+                    todayExamId = Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
+                }
 
                 document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
 
@@ -105,13 +98,6 @@
 
         async function loadWord() {
             if (currentWordIndex >= todayTestList.length) {
-                // 记录考试结束时间
-                const examEndTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-                const examListRef = doc(db, 'examList', todayExamId.toString());
-                await updateDoc(examListRef, {
-                    exam_time_end: examEndTime
-                });
-
                 alert("完成今天的测试");
                 window.location.href = "result.html";
                 return;
@@ -133,11 +119,11 @@
             speechSynthesis.speak(utterance);
         }
 
-        function playCurrentWord() {
+        async function playCurrentWord() {
             playAudio(currentWord.word);
         }
 
-        function resetWordDisplay() {
+        async function resetWordDisplay() {
             document.getElementById("wordDisplay").textContent = "**********";
         }
 
@@ -149,7 +135,7 @@
             if (userSpelling === correctSpelling) {
                 if (retestCount === 0) {
                     // First attempt is correct, save the result and move to the next word
-                    await saveTestResult(true);
+                    saveTestResult(true);
                     document.getElementById("wordTestProgress").textContent = "拼写正确！准备下一个单词";
                     document.getElementById("nextWordButton").disabled = false;
 
@@ -172,93 +158,104 @@
                             loadNextWord(); // Automatically load the next word after 1 second
                             inputField.value = "";
                             inputField.focus();
-                        }, 1000);
+                        }, 500);
 
                     } else {
                         // Retest correct but not final attempt, reset input for next retest
                         setTimeout(() => {
+                            document.getElementById("wordDisplay").textContent = "**********";
                             inputField.value = "";
                             inputField.focus();
-                        }, 1000);
+                        }, 500);
                     }
                 }
 
             } else {
                 if (retestCount === 0) {
                     // First attempt is incorrect, save the result and increment retest count
-                    await saveTestResult(false);
+                    saveTestResult(false);
+                    
                     document.getElementById("wordTestProgress").textContent = "拼写错误，再尝试3次";
+                    setTimeout(() => {
+                        document.getElementById("wordDisplay").textContent = "**********";
+                        inputField.value = "";
+                        inputField.focus();
+                    }, 500);
+                    
+
                     retestCount++;
                 } else if (retestCount < 4) {
                     // Retest is incorrect, prompt user to try again
                     document.getElementById("wordTestProgress").textContent = "拼写不正确，继续尝试";
 
                     setTimeout(() => {
+                        document.getElementById("wordDisplay").textContent = "**********";
                         inputField.value = "";
                         inputField.focus();
-                    }, 1000);
+                    }, 500);
                 }
             }
         }
 
         async function saveTestResult(isCorrect) {
-            const wordRef = doc(db, 'testResult', currentWord.id.toString());
-            const currentTimestamp = new Date().toISOString();
+        const wordRef = doc(db, 'testResult', currentWord.id.toString());
+        const currentTimestamp = new Date().toISOString();
 
-            (async () => {
-                try {
-                    const resultSnapshot = await getDoc(wordRef);
+        // Run Firestore operations asynchronously without waiting for them to finish
+        (async () => {
+            try {
+                const resultSnapshot = await getDoc(wordRef);
 
-                    if (resultSnapshot.exists()) {
-                        // Update if the document exists
-                        const data = resultSnapshot.data();
-                        const maxReviewId = data.review_attempt || 0;
+            if (resultSnapshot.exists()) {
+                // Update if the document exists
+                const data = resultSnapshot.data();
+                const maxReviewId = data.review_attempt || 0;
 
-                        // Increment review_attempt if the word is tested correctly for the first time or any subsequent attempt
-                        let newReviewId = maxReviewId;
-                        if (isCorrect && maxReviewId === 0) {
-                            newReviewId = 1;
-                        } else if (isCorrect && maxReviewId > 0) {
-                            newReviewId++;
-                        }
-
-                        // Prepare the new attempt details
-                        const newAttempt = {
-                            test_result: isCorrect,
-                            exam_id: todayExamId,
-                            timestamp: currentTimestamp
-                        };
-
-                        // Update Firestore document asynchronously
-                        await updateDoc(wordRef, {
-                            review_attempt: newReviewId,
-                            last_exam_id: todayExamId,
-                            test_attempts: [...(data.test_attempts || []), newAttempt] // Append new attempt
-                        });
-                    } else {
-                        // Create if the document does not exist
-                        const newAttempt = {
-                            test_result: isCorrect,
-                            exam_id: todayExamId,
-                            timestamp: currentTimestamp
-                        };
-
-                        await setDoc(wordRef, {
-                            id: currentWord.id,
-                            review_attempt: isCorrect ? 1 : 0, // Set to 0 if incorrect, 1 if correct
-                            last_exam_id: todayExamId,
-                            test_attempts: [newAttempt] // Start with the first attempt
-                        });
-                    }
-                } catch (error) {
-                    console.error('Error saving test result:', error);
+                // Increment review_attempt if the word is tested correctly for the first time or any subsequent attempt
+                let newReviewId = maxReviewId;
+                if (isCorrect && maxReviewId === 0) {
+                    newReviewId = 1;
+                } else if (isCorrect && maxReviewId > 0) {
+                    newReviewId++;
                 }
-            })();
 
-            // Continue with other tasks without waiting for the save operation
-            document.getElementById("wordDisplay").textContent = currentWord.word;
-            document.getElementById("inputField").value = "";
+                // Prepare the new attempt details
+                const newAttempt = {
+                    test_result: isCorrect,
+                    exam_id: todayExamId,
+                    timestamp: currentTimestamp
+                };
+
+                // Update Firestore document asynchronously
+                await updateDoc(wordRef, {
+                    review_attempt: newReviewId,
+                    last_exam_id: todayExamId,
+                    test_attempts: [...(data.test_attempts || []), newAttempt] // Append new attempt
+                });
+            } else {
+                // Create if the document does not exist
+                const newAttempt = {
+                    test_result: isCorrect,
+                    exam_id: todayExamId,
+                    timestamp: currentTimestamp
+                };
+
+                await setDoc(wordRef, {
+                    id: currentWord.id,
+                    review_attempt: isCorrect ? 1 : 0, // Set to 0 if incorrect, 1 if correct
+                    last_exam_id: todayExamId,
+                    test_attempts: [newAttempt] // Start with the first attempt
+                });
+            }
+        } catch (error) {
+            console.error('Error saving test result:', error);
         }
+    })();
+
+    // Continue with other tasks without waiting for the save operation
+    document.getElementById("wordDisplay").textContent = currentWord.word;
+    document.getElementById("inputField").value = "";
+}
 
         function loadNextWord() {
             document.getElementById("nextWordButton").disabled = true;
