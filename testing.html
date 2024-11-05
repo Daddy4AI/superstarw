@@ -158,14 +158,15 @@
                             loadNextWord(); // Automatically load the next word after 1 second
                             inputField.value = "";
                             inputField.focus();
-                        }, 1000);
+                        }, 500);
 
                     } else {
                         // Retest correct but not final attempt, reset input for next retest
                         setTimeout(() => {
+                            document.getElementById("wordDisplay").textContent = "**********";
                             inputField.value = "";
                             inputField.focus();
-                        }, 1000);
+                        }, 500);
                     }
                 }
 
@@ -173,17 +174,25 @@
                 if (retestCount === 0) {
                     // First attempt is incorrect, save the result and increment retest count
                     saveTestResult(false);
-                    inputField.focus();
+                    
                     document.getElementById("wordTestProgress").textContent = "拼写错误，再尝试3次";
+                    setTimeout(() => {
+                        document.getElementById("wordDisplay").textContent = "**********";
+                        inputField.value = "";
+                        inputField.focus();
+                    }, 500);
+                    
+
                     retestCount++;
                 } else if (retestCount < 4) {
                     // Retest is incorrect, prompt user to try again
                     document.getElementById("wordTestProgress").textContent = "拼写不正确，继续尝试";
 
                     setTimeout(() => {
+                        document.getElementById("wordDisplay").textContent = "**********";
                         inputField.value = "";
                         inputField.focus();
-                    }, 1000);
+                    }, 500);
                 }
             }
         }
