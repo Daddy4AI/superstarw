@@ -216,16 +216,26 @@
                 if (retestCount === 0) {
                     saveTestResult(false);
                     document.getElementById("wordTestProgress").textContent = "拼写错误，再尝试3次";
+                    document.getElementById("wordDisplay").textContent = currentWord.word;
+                    
+                    setTimeout(() => {
+                        
+                        inputField.value = "";
+                        inputField.focus();
+                        document.getElementById("wordDisplay").textContent = "**********";
+                    
+                    }, 500);
+
                     retestCount++;
-                    document.getElementById("wordDisplay").textContent = "**********";
+                    
 
                 } else if (retestCount < 4) {
                     document.getElementById("wordTestProgress").textContent = "拼写不正确，继续尝试";
-
+                    document.getElementById("wordDisplay").textContent = currentWord.word;
                     setTimeout(() => {
                         inputField.value = "";
                         inputField.focus();
-                        
+                        document.getElementById("wordDisplay").textContent = "**********";
                     }, 500);
                 }
             }
