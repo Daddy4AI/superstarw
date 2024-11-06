@@ -53,11 +53,20 @@
 
     <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off">
 
-    <div class="footer">version 006</div>
+    <div class="footer">version 007</div>
 
     <script type="module">
-        import { db } from './firebaseConfig.js';
-        import { doc, getDoc, setDoc, updateDoc, addDoc } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+        import { db, enableIndexedDbPersistence } from './firebaseConfig.js';
+        import { doc, getDoc, setDoc, updateDoc, addDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+
+        // 启用离线缓存
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.error("Multiple tabs open, persistence can only be enabled in one tab at a time.");
+            } else if (err.code === 'unimplemented') {
+                console.error("The current browser does not support all of the features required to enable persistence");
+            }
+        });
 
         // 从 localStorage 获取 maxWordN 和 todayExamId
         const maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
@@ -70,14 +79,26 @@
 
         async function initPage() {
             try {
-                if (isNaN(maxWordN) || isNaN(todayExamId)) {
-                    console.error("Error: maxWordN or todayExamId not found in localStorage.");
-                    return;
+                // 并行获取 maxWordN 和 examSnapshot
+                const [maxWordNDoc, examSnapshot] = await Promise.all([
+                    getDoc(doc(db, 'examSettings', 'maxWordN')),
+                    getDocs(collection(db, 'examList'))
+                ]);
+
+                // 如果 localStorage 中不存在 maxWordN 和 todayExamId，则从 Firestore 获取
+                if (isNaN(maxWordN)) {
+                    const maxWordNFromDb = maxWordNDoc.exists() ? maxWordNDoc.data().maxWordN || 25 : 25;
+                    localStorage.setItem('maxWordN', maxWordNFromDb);
+                    console.log('maxWordN retrieved and saved:', maxWordNFromDb);
                 }
 
-                console.log(`Loaded from localStorage - Max Word Number: ${maxWordN}, Today Exam ID: ${todayExamId}`);
+                if (isNaN(todayExamId)) {
+                    const todayExamIdFromDb = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
+                    localStorage.setItem('todayExamId', todayExamIdFromDb);
+                    console.log('todayExamId retrieved and saved:', todayExamIdFromDb);
+                }
 
-                // 创建新的考试记录
+                // 创建考试记录
                 const examListRef = doc(db, 'examList', todayExamId.toString());
                 const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
                 await setDoc(examListRef, {
@@ -105,7 +126,6 @@
 
         async function loadWord() {
             if (currentWordIndex >= todayTestList.length) {
-                // 记录考试结束时间
                 const examEndTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
                 const examListRef = doc(db, 'examList', todayExamId.toString());
                 try {
@@ -162,7 +182,6 @@
                         inputField.value = "";
                         inputField.focus();
                     }, 1000);
-
                 } else {
                     retestCount++;
                     document.getElementById("wordTestProgress").textContent = `完成第${retestCount - 1}次测试，还有${4 - retestCount}次`;
