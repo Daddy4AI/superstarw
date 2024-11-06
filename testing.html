@@ -68,47 +68,69 @@
         let retestCount = 0;
 
         async function initPage() {
-            try {
-                const [maxWordNDoc, examSnapshot] = await Promise.all([
-                    getDoc(doc(db, 'examSettings', 'maxWordN')),
-                    getDocs(collection(db, 'examList'))
-                ]);
+    // 优先从 localStorage 获取 maxWordN 和 todayExamId
+    let maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
+    let todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
+    console.log('maxWordN retrieved:', maxWordN);
+    console.log('todayExamId retrieved:', todayExamId);
 
-                if (isNaN(maxWordN)) {
-                    const maxWordNFromDb = maxWordNDoc.exists() ? maxWordNDoc.data().maxWordN || 25 : 25;
-                    localStorage.setItem('maxWordN', maxWordNFromDb);
-                    console.log('maxWordN retrieved and saved:', maxWordNFromDb);
-                }
+    try {
+        console.log('Starting initial setup...');
 
-                if (isNaN(todayExamId)) {
-                    const todayExamIdFromDb = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
-                    localStorage.setItem('todayExamId', todayExamIdFromDb);
-                    console.log('todayExamId retrieved and saved:', todayExamIdFromDb);
-                }
+        // 如果 maxWordN 或 todayExamId 不存在于 localStorage 中，则从 Firestore 获取
+        if (isNaN(maxWordN) || isNaN(todayExamId)) {
+            // 并行从 Firestore 获取 maxWordN 和 examList
+            const [maxWordNDoc, examSnapshot] = await Promise.all([
+                isNaN(maxWordN) ? getDoc(doc(db, 'examSettings', 'maxWordN')) : null,
+                isNaN(todayExamId) ? getDocs(collection(db, 'examList')) : null
+            ]);
 
-                const examListRef = doc(db, 'examList', todayExamId.toString());
-                const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-                await setDoc(examListRef, {
-                    id: todayExamId.toString(),
-                    exam_id: todayExamId,
-                    exam_time_start: examTimeStart,
-                    exam_time_end: null
-                });
+            // 获取并保存 maxWordN
+            if (isNaN(maxWordN) && maxWordNDoc && maxWordNDoc.exists()) {
+                maxWordN = maxWordNDoc.data().maxWordN || 25;
+                localStorage.setItem('maxWordN', maxWordN);
+                console.log('maxWordN retrieved and saved:', maxWordN);
+            } else if (isNaN(maxWordN)) {
+                maxWordN = 25; // 默认值
+                localStorage.setItem('maxWordN', maxWordN);
+                console.log('maxWordN set to default and saved:', maxWordN);
+            }
 
-                document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
-
-                todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
-                if (!todayTestList.length) {
-                    alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
-                    return;
-                }
-
-                document.getElementById('loadingMessage').style.display = "none";
-                loadWord();
-            } catch (error) {
-                console.error("Error initializing page:", error);
+            // 获取并保存 todayExamId
+            if (isNaN(todayExamId) && examSnapshot) {
+                todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
+                localStorage.setItem('todayExamId', todayExamId);
+                console.log('todayExamId retrieved and saved:', todayExamId);
             }
         }
+
+        // 创建新的考试记录
+        const examListRef = doc(db, 'examList', todayExamId.toString());
+        const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+        await setDoc(examListRef, {
+            id: todayExamId.toString(),
+            exam_id: todayExamId,
+            exam_time_start: examTimeStart,
+            exam_time_end: null
+        });
+
+        document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
+
+        // 从 localStorage 获取 todayTestList
+        todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
+        if (!todayTestList.length) {
+            alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
+            return;
+        }
+
+        document.getElementById('loadingMessage').style.display = "none";
+        loadWord();
+    } catch (error) {
+        console.error("Error initializing page:", error);
+    }
+}
+
+
 
         async function loadWord() {
             if (currentWordIndex >= todayTestList.length) {
