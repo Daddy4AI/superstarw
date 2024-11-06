@@ -54,6 +54,7 @@
 
         async function initialSetup() {
             let todayExamId = 0; // 确保在函数顶部声明变量
+            let maxWordN = 25;
 
             try {
                 console.log('Starting initial setup...');
@@ -142,7 +143,7 @@
         }
 
         async function loadTodayWords() {
-            const maxWordN = await getMaxWordN();
+            // dummy to be deleted const maxWordN = await getMaxWordN();
             const todayWordList = [];
 
             // Get all documents from the wordlist and testResult collections

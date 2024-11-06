@@ -91,16 +91,14 @@
                 }
     });
 
-
-                document.getElementById('title').textContent = `第${todayExamId}次复习，继续加油`;
-
-                // 从 localStorage 获取 todayWordList
+               // 从 localStorage 获取 todayWordList
                 todayWordList = JSON.parse(localStorage.getItem("todayWordList")) || [];
 
                 renderTable();
             } catch (error) {
                 console.error("Error initializing page:", error);
             }
+            
         }
 
         function renderTable() {
