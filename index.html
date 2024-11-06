@@ -51,12 +51,12 @@
         import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
 
-
+        let maxWordN = 25;
+        let todayExamId = 0; // 确保在函数顶部声明变量
+        
         async function initialSetup() {
-            let todayExamId = 0; // 确保在函数顶部声明变量
-            let maxWordN = 25;
-
-            try {
+            
+                        try {
                 console.log('Starting initial setup...');
 
             // 获取 examSettings 的 maxWordN 设置
