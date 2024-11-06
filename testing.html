@@ -53,22 +53,12 @@
 
     <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off">
 
-    <div class="footer">version 007</div>
+    <div class="footer">version 008</div>
 
     <script type="module">
-        import { db, enableIndexedDbPersistence } from './firebaseConfig.js';
+        import { db } from './firebaseConfig.js';
         import { doc, getDoc, setDoc, updateDoc, addDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
-        // 启用离线缓存
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.error("Multiple tabs open, persistence can only be enabled in one tab at a time.");
-            } else if (err.code === 'unimplemented') {
-                console.error("The current browser does not support all of the features required to enable persistence");
-            }
-        });
-
-        // 从 localStorage 获取 maxWordN 和 todayExamId
         const maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
         const todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
         
@@ -79,13 +69,11 @@
 
         async function initPage() {
             try {
-                // 并行获取 maxWordN 和 examSnapshot
                 const [maxWordNDoc, examSnapshot] = await Promise.all([
                     getDoc(doc(db, 'examSettings', 'maxWordN')),
                     getDocs(collection(db, 'examList'))
                 ]);
 
-                // 如果 localStorage 中不存在 maxWordN 和 todayExamId，则从 Firestore 获取
                 if (isNaN(maxWordN)) {
                     const maxWordNFromDb = maxWordNDoc.exists() ? maxWordNDoc.data().maxWordN || 25 : 25;
                     localStorage.setItem('maxWordN', maxWordNFromDb);
@@ -98,7 +86,6 @@
                     console.log('todayExamId retrieved and saved:', todayExamIdFromDb);
                 }
 
-                // 创建考试记录
                 const examListRef = doc(db, 'examList', todayExamId.toString());
                 const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
                 await setDoc(examListRef, {
@@ -110,7 +97,6 @@
 
                 document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
 
-                // 从 localStorage 获取 todayTestList
                 todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
                 if (!todayTestList.length) {
                     alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
