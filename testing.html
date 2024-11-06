@@ -53,90 +53,84 @@
 
     <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off">
 
-    <div class="footer">version 005</div>
+    <div class="footer">version 006</div>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
-        import { doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+        import { doc, getDoc, setDoc, updateDoc, addDoc } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
-        let todayExamId = 0;
+        // 从 localStorage 获取 maxWordN 和 todayExamId
+        const maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
+        const todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
+        
         let todayTestList = [];
-        let maxWordN = 10;
         let currentWordIndex = 0;
         let currentWord = null;
         let retestCount = 0;
 
         async function initPage() {
-    try {
+            try {
+                if (isNaN(maxWordN) || isNaN(todayExamId)) {
+                    console.error("Error: maxWordN or todayExamId not found in localStorage.");
+                    return;
+                }
 
-        document.addEventListener('DOMContentLoaded', () => {
-        const maxWordN = localStorage.getItem('maxWordN');
-        const todayExamId = localStorage.getItem('todayExamId');
+                console.log(`Loaded from localStorage - Max Word Number: ${maxWordN}, Today Exam ID: ${todayExamId}`);
 
-        if (maxWordN && todayExamId) {
-            console.log(`Max Word Number: ${maxWordN}, Today Exam ID: ${todayExamId}`);
-            // 你可以在页面中使用这些值，例如设置页面标题或进行其他初始化逻辑
-        } else {
-            console.error('Missing maxWordN or todayExamId in localStorage');
-        }
-    });
+                // 创建新的考试记录
+                const examListRef = doc(db, 'examList', todayExamId.toString());
+                const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+                await setDoc(examListRef, {
+                    id: todayExamId.toString(),
+                    exam_id: todayExamId,
+                    exam_time_start: examTimeStart,
+                    exam_time_end: null
+                });
 
+                document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
 
-        // 使用 exam_id 作为文档 ID 创建新的考试记录
-        const examListRef = doc(db, 'examList', todayExamId.toString());
-        const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-        await setDoc(examListRef, {
-            id: todayExamId.toString(),
-            exam_id: todayExamId,
-            exam_time_start: examTimeStart,
-            exam_time_end: null
-        });
+                // 从 localStorage 获取 todayTestList
+                todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
+                if (!todayTestList.length) {
+                    alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
+                    return;
+                }
 
-        document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
-
-        // 从 localStorage 获取 todayTestList
-        todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
-        if (!todayTestList.length) {
-            alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
-            return;
-        }
-
-        document.getElementById('loadingMessage').style.display = "none";
-        loadWord();
-    } catch (error) {
-        console.error("Error initializing page:", error);
-    }
-}
-
-async function loadWord() {
-    if (currentWordIndex >= todayTestList.length) {
-        // 记录考试结束时间
-        const examEndTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-        const examListRef = doc(db, 'examList', todayExamId.toString());
-        try {
-            await updateDoc(examListRef, {
-                exam_time_end: examEndTime
-            });
-            console.log('考试结束时间已记录');
-        } catch (error) {
-            console.error('Error updating exam end time:', error);
+                document.getElementById('loadingMessage').style.display = "none";
+                loadWord();
+            } catch (error) {
+                console.error("Error initializing page:", error);
+            }
         }
 
-        alert("完成今天的测试");
-        window.location.href = "result.html";
-        return;
-    }
+        async function loadWord() {
+            if (currentWordIndex >= todayTestList.length) {
+                // 记录考试结束时间
+                const examEndTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+                const examListRef = doc(db, 'examList', todayExamId.toString());
+                try {
+                    await updateDoc(examListRef, {
+                        exam_time_end: examEndTime
+                    });
+                    console.log('考试结束时间已记录');
+                } catch (error) {
+                    console.error('Error updating exam end time:', error);
+                }
 
-    currentWord = todayTestList[currentWordIndex];
-    document.getElementById("progressTitle").textContent = `${currentWordIndex + 1} of ${maxWordN}个单词`;
-    document.getElementById("wordDisplay").textContent = "**********";
-    document.getElementById("wordTestProgress").textContent = "测试状态";
-    document.getElementById("inputField").value = "";
-    retestCount = 0;
+                alert("完成今天的测试");
+                window.location.href = "result.html";
+                return;
+            }
 
-    playAudio(currentWord.word);
-}
+            currentWord = todayTestList[currentWordIndex];
+            document.getElementById("progressTitle").textContent = `${currentWordIndex + 1} of ${maxWordN}个单词`;
+            document.getElementById("wordDisplay").textContent = "**********";
+            document.getElementById("wordTestProgress").textContent = "测试状态";
+            document.getElementById("inputField").value = "";
+            retestCount = 0;
 
+            playAudio(currentWord.word);
+        }
 
         async function playAudio(word) {
             const utterance = new SpeechSynthesisUtterance(word);
@@ -159,19 +153,17 @@ async function loadWord() {
 
             if (userSpelling === correctSpelling) {
                 if (retestCount === 0) {
-                    // First attempt is correct, save the result and move to the next word
                     await saveTestResult(true);
                     document.getElementById("wordTestProgress").textContent = "拼写正确！准备下一个单词";
                     document.getElementById("nextWordButton").disabled = false;
 
                     setTimeout(() => {
-                        loadNextWord(); // Automatically load the next word after 1 second
+                        loadNextWord();
                         inputField.value = "";
                         inputField.focus();
                     }, 1000);
 
                 } else {
-                    // Retest attempt is correct, increment retest count
                     retestCount++;
                     document.getElementById("wordTestProgress").textContent = `完成第${retestCount - 1}次测试，还有${4 - retestCount}次`;
 
@@ -180,28 +172,23 @@ async function loadWord() {
                         document.getElementById("wordTestProgress").textContent = "准备下一个单词";
 
                         setTimeout(() => {
-                            loadNextWord(); // Automatically load the next word after 1 second
+                            loadNextWord();
                             inputField.value = "";
                             inputField.focus();
                         }, 1000);
-
                     } else {
-                        // Retest correct but not final attempt, reset input for next retest
                         setTimeout(() => {
                             inputField.value = "";
                             inputField.focus();
                         }, 1000);
                     }
                 }
-
             } else {
                 if (retestCount === 0) {
-                    // First attempt is incorrect, save the result and increment retest count
                     await saveTestResult(false);
                     document.getElementById("wordTestProgress").textContent = "拼写错误，再尝试3次";
                     retestCount++;
                 } else if (retestCount < 4) {
-                    // Retest is incorrect, prompt user to try again
                     document.getElementById("wordTestProgress").textContent = "拼写不正确，继续尝试";
 
                     setTimeout(() => {
@@ -221,11 +208,9 @@ async function loadWord() {
                     const resultSnapshot = await getDoc(wordRef);
 
                     if (resultSnapshot.exists()) {
-                        // Update if the document exists
                         const data = resultSnapshot.data();
                         const maxReviewId = data.review_attempt || 0;
 
-                        // Increment review_attempt if the word is tested correctly for the first time or any subsequent attempt
                         let newReviewId = maxReviewId;
                         if (isCorrect && maxReviewId === 0) {
                             newReviewId = 1;
@@ -233,21 +218,18 @@ async function loadWord() {
                             newReviewId++;
                         }
 
-                        // Prepare the new attempt details
                         const newAttempt = {
                             test_result: isCorrect,
                             exam_id: todayExamId,
                             timestamp: currentTimestamp
                         };
 
-                        // Update Firestore document asynchronously
                         await updateDoc(wordRef, {
                             review_attempt: newReviewId,
                             last_exam_id: todayExamId,
-                            test_attempts: [...(data.test_attempts || []), newAttempt] // Append new attempt
+                            test_attempts: [...(data.test_attempts || []), newAttempt]
                         });
                     } else {
-                        // Create if the document does not exist
                         const newAttempt = {
                             test_result: isCorrect,
                             exam_id: todayExamId,
@@ -256,9 +238,9 @@ async function loadWord() {
 
                         await setDoc(wordRef, {
                             id: currentWord.id,
-                            review_attempt: isCorrect ? 1 : 0, // Set to 0 if incorrect, 1 if correct
+                            review_attempt: isCorrect ? 1 : 0,
                             last_exam_id: todayExamId,
-                            test_attempts: [newAttempt] // Start with the first attempt
+                            test_attempts: [newAttempt]
                         });
                     }
                 } catch (error) {
@@ -266,7 +248,6 @@ async function loadWord() {
                 }
             })();
 
-            // Continue with other tasks without waiting for the save operation
             document.getElementById("wordDisplay").textContent = currentWord.word;
             document.getElementById("inputField").value = "";
         }
