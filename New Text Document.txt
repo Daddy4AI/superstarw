@@ -1,2 +1,0 @@
-    console.log('maxWordN retrieved:', maxWordN);
-    console.log('todayExamId retrieved:', todayExamId);
