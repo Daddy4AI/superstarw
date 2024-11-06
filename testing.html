@@ -61,6 +61,8 @@
 
         const maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
         const todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
+        console.log('maxWordN retrieved:', maxWordN);
+        console.log('todayExamId retrieved:', todayExamId);
         
         let todayTestList = [];
         let currentWordIndex = 0;
@@ -69,10 +71,9 @@
 
         async function initPage() {
     // 优先从 localStorage 获取 maxWordN 和 todayExamId
-    let maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
-    let todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
-    console.log('maxWordN retrieved:', maxWordN);
-    console.log('todayExamId retrieved:', todayExamId);
+    // let maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
+    // let todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
+
 
     try {
         console.log('Starting initial setup...');
@@ -104,16 +105,6 @@
             }
         }
 
-        // 创建新的考试记录
-        const examListRef = doc(db, 'examList', todayExamId.toString());
-        const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-        await setDoc(examListRef, {
-            id: todayExamId.toString(),
-            exam_id: todayExamId,
-            exam_time_start: examTimeStart,
-            exam_time_end: null
-        });
-
         document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
 
         // 从 localStorage 获取 todayTestList
@@ -128,6 +119,17 @@
     } catch (error) {
         console.error("Error initializing page:", error);
     }
+
+            // 创建新的考试记录
+            const examListRef = doc(db, 'examList', todayExamId.toString());
+        const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+        await setDoc(examListRef, {
+            id: todayExamId.toString(),
+            exam_id: todayExamId,
+            exam_time_start: examTimeStart,
+            exam_time_end: null
+        });
+
 }
 
 
@@ -189,7 +191,7 @@
                         loadNextWord();
                         inputField.value = "";
                         inputField.focus();
-                    }, 1000);
+                    }, 500);
                 } else {
                     retestCount++;
                     document.getElementById("wordTestProgress").textContent = `完成第${retestCount - 1}次测试，还有${4 - retestCount}次`;
@@ -202,26 +204,29 @@
                             loadNextWord();
                             inputField.value = "";
                             inputField.focus();
-                        }, 1000);
+                        }, 500);
                     } else {
                         setTimeout(() => {
                             inputField.value = "";
                             inputField.focus();
-                        }, 1000);
+                        }, 500);
                     }
                 }
             } else {
                 if (retestCount === 0) {
-                    await saveTestResult(false);
+                    saveTestResult(false);
                     document.getElementById("wordTestProgress").textContent = "拼写错误，再尝试3次";
                     retestCount++;
+                    document.getElementById("wordDisplay").textContent = "**********";
+
                 } else if (retestCount < 4) {
                     document.getElementById("wordTestProgress").textContent = "拼写不正确，继续尝试";
 
                     setTimeout(() => {
                         inputField.value = "";
                         inputField.focus();
-                    }, 1000);
+                        
+                    }, 500);
                 }
             }
         }
