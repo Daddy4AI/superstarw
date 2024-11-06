@@ -53,98 +53,76 @@
 
     <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off">
 
-    <div class="footer">version 008</div>
+    <div class="footer">version 009</div>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
-        import { doc, getDoc, setDoc, updateDoc, addDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+        import { doc, setDoc, getDoc, collection, getDocs, updateDoc } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
-        const maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
-        const todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
+        // 从 localStorage 获取 maxWordN 和 todayExamId
+        let maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
+        let todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
         
         let todayTestList = [];
         let currentWordIndex = 0;
         let currentWord = null;
         let retestCount = 0;
+        let examResults = []; // 用于存储本次考试的结果
 
         async function initPage() {
-    // 优先从 localStorage 获取 maxWordN 和 todayExamId
-    let maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
-    let todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
-    console.log('maxWordN retrieved:', maxWordN);
-    console.log('todayExamId retrieved:', todayExamId);
+            try {
+                console.log('Starting initial setup...');
 
-    try {
-        console.log('Starting initial setup...');
+                // 如果 localStorage 中没有 maxWordN 和 todayExamId，则从 Firestore 获取并保存
+                if (isNaN(maxWordN) || isNaN(todayExamId)) {
+                    const [maxWordNDoc, examSnapshot] = await Promise.all([
+                        isNaN(maxWordN) ? getDoc(doc(db, 'examSettings', 'maxWordN')) : null,
+                        isNaN(todayExamId) ? getDocs(collection(db, 'examList')) : null
+                    ]);
 
-        // 如果 maxWordN 或 todayExamId 不存在于 localStorage 中，则从 Firestore 获取
-        if (isNaN(maxWordN) || isNaN(todayExamId)) {
-            // 并行从 Firestore 获取 maxWordN 和 examList
-            const [maxWordNDoc, examSnapshot] = await Promise.all([
-                isNaN(maxWordN) ? getDoc(doc(db, 'examSettings', 'maxWordN')) : null,
-                isNaN(todayExamId) ? getDocs(collection(db, 'examList')) : null
-            ]);
+                    if (isNaN(maxWordN) && maxWordNDoc && maxWordNDoc.exists()) {
+                        maxWordN = maxWordNDoc.data().maxWordN || 25;
+                        localStorage.setItem('maxWordN', maxWordN);
+                    } else if (isNaN(maxWordN)) {
+                        maxWordN = 25;
+                        localStorage.setItem('maxWordN', maxWordN);
+                    }
 
-            // 获取并保存 maxWordN
-            if (isNaN(maxWordN) && maxWordNDoc && maxWordNDoc.exists()) {
-                maxWordN = maxWordNDoc.data().maxWordN || 25;
-                localStorage.setItem('maxWordN', maxWordN);
-                console.log('maxWordN retrieved and saved:', maxWordN);
-            } else if (isNaN(maxWordN)) {
-                maxWordN = 25; // 默认值
-                localStorage.setItem('maxWordN', maxWordN);
-                console.log('maxWordN set to default and saved:', maxWordN);
-            }
+                    if (isNaN(todayExamId) && examSnapshot) {
+                        todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
+                        localStorage.setItem('todayExamId', todayExamId);
+                    }
+                }
 
-            // 获取并保存 todayExamId
-            if (isNaN(todayExamId) && examSnapshot) {
-                todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
-                localStorage.setItem('todayExamId', todayExamId);
-                console.log('todayExamId retrieved and saved:', todayExamId);
+                // 创建新的考试记录
+                const examListRef = doc(db, 'examList', todayExamId.toString());
+                const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+                await setDoc(examListRef, {
+                    id: todayExamId.toString(),
+                    exam_id: todayExamId,
+                    exam_time_start: examTimeStart,
+                    exam_time_end: null
+                });
+
+                document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
+
+                // 从 localStorage 获取 todayTestList
+                todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
+                if (!todayTestList.length) {
+                    alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
+                    return;
+                }
+
+                document.getElementById('loadingMessage').style.display = "none";
+                loadWord();
+            } catch (error) {
+                console.error("Error initializing page:", error);
             }
         }
-
-        // 创建新的考试记录
-        const examListRef = doc(db, 'examList', todayExamId.toString());
-        const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-        await setDoc(examListRef, {
-            id: todayExamId.toString(),
-            exam_id: todayExamId,
-            exam_time_start: examTimeStart,
-            exam_time_end: null
-        });
-
-        document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
-
-        // 从 localStorage 获取 todayTestList
-        todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
-        if (!todayTestList.length) {
-            alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
-            return;
-        }
-
-        document.getElementById('loadingMessage').style.display = "none";
-        loadWord();
-    } catch (error) {
-        console.error("Error initializing page:", error);
-    }
-}
-
-
 
         async function loadWord() {
             if (currentWordIndex >= todayTestList.length) {
-                const examEndTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-                const examListRef = doc(db, 'examList', todayExamId.toString());
-                try {
-                    await updateDoc(examListRef, {
-                        exam_time_end: examEndTime
-                    });
-                    console.log('考试结束时间已记录');
-                } catch (error) {
-                    console.error('Error updating exam end time:', error);
-                }
-
+                await saveAllResults();
                 alert("完成今天的测试");
                 window.location.href = "result.html";
                 return;
@@ -181,7 +159,8 @@
 
             if (userSpelling === correctSpelling) {
                 if (retestCount === 0) {
-                    await saveTestResult(true);
+                    // 第一次测试正确，保存结果并移动到下一个单词
+                    saveTestResult(true);
                     document.getElementById("wordTestProgress").textContent = "拼写正确！准备下一个单词";
                     document.getElementById("nextWordButton").disabled = false;
 
@@ -212,7 +191,7 @@
                 }
             } else {
                 if (retestCount === 0) {
-                    await saveTestResult(false);
+                    saveTestResult(false);
                     document.getElementById("wordTestProgress").textContent = "拼写错误，再尝试3次";
                     retestCount++;
                 } else if (retestCount < 4) {
@@ -226,57 +205,60 @@
             }
         }
 
-        async function saveTestResult(isCorrect) {
-            const wordRef = doc(db, 'testResult', currentWord.id.toString());
+        function saveTestResult(isCorrect) {
             const currentTimestamp = new Date().toISOString();
 
-            (async () => {
-                try {
+            const testResult = {
+                word_id: currentWord.id,
+                test_result: isCorrect,
+                exam_id: todayExamId,
+                timestamp: currentTimestamp
+            };
+
+            examResults.push(testResult); // 将结果添加到本地数组中
+        }
+
+        async function saveAllResults() {
+            try {
+                const examListRef = doc(db, 'examList', todayExamId.toString());
+                const examEndTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+                
+                // 更新考试结束时间
+                await updateDoc(examListRef, {
+                    exam_time_end: examEndTime
+                });
+
+                // 批量写入每个单词的测试结果
+                for (let result of examResults) {
+                    const wordRef = doc(db, 'testResult', result.word_id.toString());
                     const resultSnapshot = await getDoc(wordRef);
 
                     if (resultSnapshot.exists()) {
                         const data = resultSnapshot.data();
-                        const maxReviewId = data.review_attempt || 0;
-
-                        let newReviewId = maxReviewId;
-                        if (isCorrect && maxReviewId === 0) {
-                            newReviewId = 1;
-                        } else if (isCorrect && maxReviewId > 0) {
-                            newReviewId++;
-                        }
-
                         const newAttempt = {
-                            test_result: isCorrect,
-                            exam_id: todayExamId,
-                            timestamp: currentTimestamp
+                            test_result: result.test_result,
+                            exam_id: result.exam_id,
+                            timestamp: result.timestamp
                         };
-
+                        
+                        // 更新文档，将新的测试结果追加到 `test_attempts`
                         await updateDoc(wordRef, {
-                            review_attempt: newReviewId,
-                            last_exam_id: todayExamId,
+                            last_exam_id: result.exam_id,
                             test_attempts: [...(data.test_attempts || []), newAttempt]
                         });
                     } else {
-                        const newAttempt = {
-                            test_result: isCorrect,
-                            exam_id: todayExamId,
-                            timestamp: currentTimestamp
-                        };
-
+                        // 创建新的文档
                         await setDoc(wordRef, {
-                            id: currentWord.id,
-                            review_attempt: isCorrect ? 1 : 0,
-                            last_exam_id: todayExamId,
-                            test_attempts: [newAttempt]
+                            id: result.word_id,
+                            last_exam_id: result.exam_id,
+                            test_attempts: [{ test_result: result.test_result, exam_id: result.exam_id, timestamp: result.timestamp }]
                         });
                     }
-                } catch (error) {
-                    console.error('Error saving test result:', error);
                 }
-            })();
-
-            document.getElementById("wordDisplay").textContent = currentWord.word;
-            document.getElementById("inputField").value = "";
+                console.log("所有测试结果已成功保存到 Firestore");
+            } catch (error) {
+                console.error("Error saving results to Firestore:", error);
+            }
         }
 
         function loadNextWord() {
