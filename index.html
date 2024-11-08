@@ -120,6 +120,8 @@
                 // 将 todayExamId 保存到 localStorage
                 localStorage.setItem('todayExamId', todayExamId);
 
+                document.getElementById('title').textContent = `欢迎回来，这是第${todayExamId}次测试`;
+
                 // Console log to verify values are stored successfully
                 console.log('maxWordN saved to localStorage:', localStorage.getItem('maxWordN'));
                 console.log('todayExamId saved to localStorage:', localStorage.getItem('todayExamId'));
@@ -268,7 +270,7 @@
             console.log('Page loaded. Running initial setup...');
             initialSetup();
             loadTodayWords();
-            document.getElementById('title').textContent = `欢迎回来，这是第${todayExamId}次测试`;
+            
         });
         
 
