@@ -176,7 +176,9 @@
                 }, 0);
                 const accuracy = ((correctCount / totalWords) * 100).toFixed(2);
                 const examDuration = examData ? calculateExamDuration(examData.exam_time_start, examData.exam_time_end) : "未知";
-                const averageTimePerWord = examData ? (calculateAverageTimePerWord(examData.exam_time_start, examData.exam_time_end, totalWords)).toFixed(2) : "未知";
+                const averageTimePerWord = examData ? calculateAverageTimePerWord(examData.exam_time_start, examData.exam_time_end, totalWords) : "未知";
+
+
 
                 document.getElementById('testSummaryDetails').innerHTML = `
                     <p>本次考试是第 ${todayExamId} 次考试，一共复习了 ${totalWords} 个单词，正确率为 ${accuracy}%</p>
@@ -245,8 +247,9 @@
 
         function calculateAverageTimePerWord(startTime, endTime, totalWords) {
             const durationInSeconds = calculateExamDuration(startTime, endTime);
-            return (durationInSeconds / totalWords).toFixed(2);
+            return totalWords > 0 ? (durationInSeconds / totalWords).toFixed(2) : 0;
         }
+
 
         function goToHomePage() {
             window.location.href = 'index.html';
