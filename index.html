@@ -11,16 +11,17 @@
         }
         button {
             padding: 10px 20px;
-            margin: 10px;
-            font-size: 16px;
+            margin: 20px;
+            font-size: 20px;
         }
         table {
             margin: 20px auto;
             border-collapse: collapse;
+            font-size: 25px; /* 设置表格文字大小为 25px */
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 10px;
         }
         th {
             background-color: #f2f2f2;
@@ -35,13 +36,13 @@
 </head>
 <body>
     <h1>Build a Strong Vocabulary</h1>
+    <p style="font-size: 15px; color: #666;">可以尝试拼写这些单词，然后再复习和测试。</p>
     <div id="setupMessage" style="display: none;">Initializing...</div>
     <div id="errorMessage" style="display: none; color: red;"></div>
 
     <button id="viewWordsButton">查看</button>
     <button id="reviewWordsButton">复习</button>
-    <button id="testWordsButton">测试</button>
-
+    
     <div id="wordListContainer"></div>
 
     <footer>version 001</footer>
@@ -53,10 +54,10 @@
 
         let maxWordN = 25;
         let todayExamId = 0; // 确保在函数顶部声明变量
-        
+
         async function initialSetup() {
             
-                        try {
+        try {
                 console.log('Starting initial setup...');
 
             // 获取 examSettings 的 maxWordN 设置
@@ -266,6 +267,7 @@
         window.addEventListener('load', () => {
             console.log('Page loaded. Running initial setup...');
             initialSetup();
+            document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
             loadTodayWords();
         });
         
@@ -275,9 +277,7 @@
         document.getElementById('reviewWordsButton').addEventListener('click', () => {
             window.location.href = "review.html";
         });
-
-        document.getElementById('testWordsButton').addEventListener('click', () => {
-            window.location.href = "testing.html";
+        
         });
     </script>
 </body>
