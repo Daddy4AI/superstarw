@@ -92,68 +92,73 @@
         let todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
         let todayTestList = JSON.parse(localStorage.getItem("todayWordList")) || [];
 
-        async function loadTestResults() {
-            try {
-                console.log("加载测试结果中...");
+       // 更新后的 loadTestResults 函数
+async function loadTestResults() {
+    try {
+        console.log("加载测试结果中...");
 
-                // 获取当前考试数据
-                const examDoc = await getDoc(doc(db, 'examList', todayExamId.toString()));
-                const examData = examDoc.exists() ? examDoc.data() : null;
-                console.log("examData:", examData);
+        // 获取当前考试数据
+        const examDoc = await getDoc(doc(db, 'examList', todayExamId.toString()));
+        const examData = examDoc.exists() ? examDoc.data() : null;
+        console.log("examData:", examData);
 
-                // 获取 testResult 集合中的数据并过滤当前考试的结果
-                const testResultSnapshot = await getDocs(collection(db, 'testResult'));
-                const testResults = testResultSnapshot.docs
-                    .map(doc => doc.data())
-                    .filter(result => result.exam_id === todayExamId && result.id !== 0);
+        // 获取 testResult 集合中的数据
+        const testResultSnapshot = await getDocs(collection(db, 'testResult'));
+        const testResults = testResultSnapshot.docs
+            .map(doc => doc.data())
+            .filter(result => result.id !== 0); // 剔除 id=0 的记录
 
-                console.log("testResults:", testResults);
+        // 确认 testResults 数组是否有数据
+        if (testResults.length === 0) {
+            console.error("未找到与此考试相关的测试结果");
+        }
 
-                // 确认 testResults 数组是否有数据
-                if (testResults.length === 0) {
-                    console.error("未找到与此考试相关的测试结果");
-                }
-
-                // 计算测试总结
-                const totalWords = todayTestList.length;
-                const correctCount = testResults.filter(result => result.test_result).length;
-                const accuracy = ((correctCount / totalWords) * 100).toFixed(2);
-                const examDuration = examData ? calculateExamDuration(examData.exam_time_start, examData.exam_time_end) : "未知";
-                const averageTimePerWord = examData ? (calculateAverageTimePerWord(examData.exam_time_start, examData.exam_time_end, totalWords)).toFixed(2) : "未知";
-
-                document.getElementById('testSummaryDetails').innerHTML = `
-                    <p>本次考试是第 ${todayExamId} 次考试，一共复习了 ${totalWords} 个单词，正确率为 ${accuracy}%</p>
-                    <p>考试时间为 ${examDuration}，平均每个单词时间为 ${averageTimePerWord} 秒</p>
-                `;
-
-                // 填充测试细节表格
-                const testDetailsTable = document.getElementById('testDetailsTable');
-                testResults.forEach(result => {
+        // 获取本次考试的测试结果，遍历每个单词的 test_attempts 数组
+        const testDetailsTable = document.getElementById('testDetailsTable');
+        testResults.forEach(result => {
+            result.test_attempts.forEach(attempt => {
+                if (attempt.exam_id === todayExamId) {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${result.word}</td>
-                        <td>${result.status}</td>
-                        <td>${result.test_result ? '正确' : '错误'}</td>
+                        <td>${result.id}</td> <!-- 或者替换为单词内容 -->
+                        <td>${result.review_attempt}</td>
+                        <td>${attempt.test_result ? '正确' : '错误'}</td>
                         <td>${result.test_attempts.length}</td>
                     `;
                     testDetailsTable.appendChild(row);
-                });
+                }
+            });
+        });
 
-                // 获取所有单词列表，并生成单词的统计数据
-                const wordListSnapshot = await getDocs(collection(db, 'wordlist'));
-                const wordList = wordListSnapshot.docs.map(doc => doc.data());
-                const totalWordCount = wordList.length;
+        // 计算测试总结
+        const totalWords = todayTestList.length;
+        const correctCount = testResults.reduce((count, result) => {
+            return count + result.test_attempts.filter(attempt => attempt.exam_id === todayExamId && attempt.test_result).length;
+        }, 0);
+        const accuracy = ((correctCount / totalWords) * 100).toFixed(2);
+        const examDuration = examData ? calculateExamDuration(examData.exam_time_start, examData.exam_time_end) : "未知";
+        const averageTimePerWord = examData ? (calculateAverageTimePerWord(examData.exam_time_start, examData.exam_time_end, totalWords)).toFixed(2) : "未知";
 
-                console.log("wordList 数据:", wordList);
-                console.log("totalWordCount:", totalWordCount);
+        document.getElementById('testSummaryDetails').innerHTML = `
+            <p>本次考试是第 ${todayExamId} 次考试，一共复习了 ${totalWords} 个单词，正确率为 ${accuracy}%</p>
+            <p>考试时间为 ${examDuration}，平均每个单词时间为 ${averageTimePerWord} 秒</p>
+        `;
 
-                const stats = calculateWordStatistics(wordList, testResults, totalWordCount);
-                displayWordStatistics(stats);
+        // 获取所有单词列表，并生成单词的统计数据
+        const wordListSnapshot = await getDocs(collection(db, 'wordlist'));
+        const wordList = wordListSnapshot.docs.map(doc => doc.data());
+        const totalWordCount = wordList.length;
 
-            } catch (error) {
-                console.error('加载测试结果时出错:', error);
-            }
-        }
+        console.log("wordList 数据:", wordList);
+        console.log("totalWordCount:", totalWordCount);
+
+        const stats = calculateWordStatistics(wordList, testResults, totalWordCount);
+        displayWordStatistics(stats);
+
+    } catch (error) {
+        console.error('加载测试结果时出错:', error);
+    }
+}
 
         function calculateExamDuration(startTime, endTime) {
             const start = new Date(startTime);
