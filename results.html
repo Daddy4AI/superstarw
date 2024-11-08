@@ -93,7 +93,8 @@
         let todayTestList = JSON.parse(localStorage.getItem("todayWordList")) || [];
 
        // 更新后的 loadTestResults 函数
-async function loadTestResults() {
+
+       async function loadTestResults() {
     try {
         console.log("加载测试结果中...");
 
@@ -108,6 +109,17 @@ async function loadTestResults() {
             .map(doc => doc.data())
             .filter(result => result.id !== 0); // 剔除 id=0 的记录
 
+        // 获取所有单词列表以映射单词名称
+        const wordListSnapshot = await getDocs(collection(db, 'wordlist'));
+        const wordList = wordListSnapshot.docs.map(doc => doc.data());
+        const totalWordCount = wordList.length;
+
+        // 创建一个 map，用于快速查找单词名称
+        const wordMap = {};
+        wordList.forEach(word => {
+            wordMap[word.id] = word.word; // 假设 `wordList` 中的字段为 `id` 和 `word`
+        });
+
         // 确认 testResults 数组是否有数据
         if (testResults.length === 0) {
             console.error("未找到与此考试相关的测试结果");
@@ -119,9 +131,12 @@ async function loadTestResults() {
             result.test_attempts.forEach(attempt => {
                 if (attempt.exam_id === todayExamId) {
                     const row = document.createElement('tr');
+                    const word = wordMap[result.id] || "未知单词"; // 使用 wordMap 获取单词名称
+                    const reviewStatus = result.review_attempt === 0 ? "初始复习" : `第${result.review_attempt}次复习`;
+
                     row.innerHTML = `
-                        <td>${result.id}</td> <!-- 或者替换为单词内容 -->
-                        <td>${result.review_attempt}</td>
+                        <td>${word}</td>
+                        <td>${reviewStatus}</td>
                         <td>${attempt.test_result ? '正确' : '错误'}</td>
                         <td>${result.test_attempts.length}</td>
                     `;
@@ -143,11 +158,6 @@ async function loadTestResults() {
             <p>本次考试是第 ${todayExamId} 次考试，一共复习了 ${totalWords} 个单词，正确率为 ${accuracy}%</p>
             <p>考试时间为 ${examDuration}，平均每个单词时间为 ${averageTimePerWord} 秒</p>
         `;
-
-        // 获取所有单词列表，并生成单词的统计数据
-        const wordListSnapshot = await getDocs(collection(db, 'wordlist'));
-        const wordList = wordListSnapshot.docs.map(doc => doc.data());
-        const totalWordCount = wordList.length;
 
         console.log("wordList 数据:", wordList);
         console.log("totalWordCount:", totalWordCount);
@@ -176,34 +186,36 @@ async function loadTestResults() {
             return durationInSeconds / totalWords;
         }
 
+
         function calculateWordStatistics(wordList, testResults, totalWords) {
-            const testedWords = testResults.length;
-            const completed1 = testResults.filter(result => result.review_attempt === 1).length;
-            const completed2 = testResults.filter(result => result.review_attempt === 2).length;
-            const completed3 = testResults.filter(result => result.review_attempt === 3).length;
-            const completed4 = testResults.filter(result => result.review_attempt === 4).length;
-            const completed5 = testResults.filter(result => result.review_attempt >= 5).length;
+    const testedWords = testResults.length;
+    const completed1 = testResults.filter(result => result.review_attempt <= 1).length;
+    const completed2 = testResults.filter(result => result.review_attempt <= 2).length;
+    const completed3 = testResults.filter(result => result.review_attempt <= 3).length;
+    const completed4 = testResults.filter(result => result.review_attempt <= 4).length;
+    const completed5 = testResults.filter(result => result.review_attempt >= 5).length;
 
-            console.log("统计数据：", {
-                testedWords,
-                completed1,
-                completed2,
-                completed3,
-                completed4,
-                completed5,
-                totalWords
-            });
+    console.log("统计数据：", {
+        testedWords,
+        completed1,
+        completed2,
+        completed3,
+        completed4,
+        completed5,
+        totalWords
+    });
 
-            return {
-                testedWords,
-                completed1,
-                completed2,
-                completed3,
-                completed4,
-                completed5,
-                totalWords
-            };
-        }
+    return {
+        testedWords,
+        completed1,
+        completed2,
+        completed3,
+        completed4,
+        completed5,
+        totalWords
+    };
+}
+
 
         function displayWordStatistics(stats) {
             const wordStatisticsDetails = document.getElementById('wordStatisticsDetails');
