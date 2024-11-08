@@ -13,6 +13,7 @@
             margin: 20px auto;
             border-collapse: collapse;
             width: 80%;
+            font-size: 20px;
         }
         th, td {
             border: 1px solid #ddd;
@@ -66,7 +67,8 @@
             <!-- 动态填充单词列表 -->
         </tbody>
     </table>
-    <button id="startTestButton" class="floating-top">开始测试</button>
+    
+    <button id="startTestButton" disabled>开始测试</button>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
@@ -197,7 +199,8 @@
                 .every(cell => cell.textContent === '正确');
 
             if (allCorrect) {
-                document.getElementById('startTestButton').style.display = 'block';
+                // document.getElementById('startTestButton').style.display = 'block';
+                startTestButton.disabled = false; // 启用按钮
             }
         }
 
