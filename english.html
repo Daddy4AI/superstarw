@@ -45,7 +45,7 @@
     
     <div id="wordListContainer"></div>
 
-    <footer>version 001</footer>
+    <footer>version 002</footer>
 
     <script type="module">
         import { db } from './firebaseConfig.js';
@@ -254,7 +254,7 @@
         function displayWords(wordList) {
             if (wordList.length > 0) {
                 let tableHtml = `<table>
-                    <tr><th>单词</th><th>状态</th><th>翻译</th></tr>`;
+                    <tr><th>单词</th><th>状态</th><th>中文</th></tr>`;
                 wordList.forEach(word => {
                     tableHtml += `<tr>
                         <td>${word.word}</td>
