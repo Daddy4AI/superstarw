@@ -61,12 +61,8 @@
 <body>
     <h1>测试结果</h1>
 
-    <!-- 第一个区域：本次测试的总结和细节 -->
     <div class="summary" id="testSummary">
-        <!-- 本次测试总结 -->
         <p id="testSummaryDetails">加载中...</p>
-
-        <!-- 测试细节 Table -->
         <table>
             <thead>
                 <tr>
@@ -82,13 +78,11 @@
         </table>
     </div>
 
-    <!-- 第二个区域：所有单词的测试统计 -->
     <div class="summary" id="wordStatistics">
         <h2>所有单词测试统计</h2>
         <div id="wordStatisticsDetails">加载中...</div>
     </div>
 
-    <!-- 返回首页按钮 -->
     <button class="back-button" onclick="goToHomePage()">返回首页</button>
 
     <script type="module">
@@ -105,7 +99,6 @@
                 const examDoc = await getDoc(doc(db, 'examList', todayExamId.toString()));
                 const examData = examDoc.exists() ? examDoc.data() : null;
 
-                // 本次测试总结
                 const totalWords = todayTestList.length;
                 const correctCount = testResults.filter(result => result.test_result).length;
                 const accuracy = ((correctCount / totalWords) * 100).toFixed(2);
@@ -117,7 +110,6 @@
                     <p>考试时间为 ${examDuration}，平均每个单词时间为 ${averageTimePerWord} 秒</p>
                 `;
 
-                // 填充测试细节表格
                 const testDetailsTable = document.getElementById('testDetailsTable');
                 testResults.forEach(result => {
                     const row = document.createElement('tr');
@@ -130,12 +122,12 @@
                     testDetailsTable.appendChild(row);
                 });
 
-                // 统计所有单词的测试数据
-                const wordListSnapshot = await getDocs(collection(db, 'wordlist'));
-                const wordList = wordListSnapshot.docs.map(doc => doc.data());
-                totalWordCount = wordList.length;
+                const testResultSnapshot = await getDocs(collection(db, 'testResult'));
+                const testResultData = testResultSnapshot.docs
+                    .map(doc => doc.data())
+                    .filter(data => data.id !== 0);  // 剔除 id = 0 的记录
 
-                const stats = calculateWordStatistics(wordList);
+                const stats = calculateWordStatistics(testResultData);
                 displayWordStatistics(stats);
 
             } catch (error) {
@@ -159,14 +151,14 @@
             return durationInSeconds / totalWords;
         }
 
-        function calculateWordStatistics(wordList) {
-            const totalWords = wordList.length;
-            const testedWords = wordList.filter(word => word.test_attempts && word.test_attempts.length > 0).length;
-            const completed1 = wordList.filter(word => word.review_attempt === 1).length;
-            const completed2 = wordList.filter(word => word.review_attempt === 2).length;
-            const completed3 = wordList.filter(word => word.review_attempt === 3).length;
-            const completed4 = wordList.filter(word => word.review_attempt === 4).length;
-            const completed5 = wordList.filter(word => word.review_attempt >= 5).length;
+        function calculateWordStatistics(testResults) {
+            const totalWords = testResults.length;
+            const testedWords = testResults.filter(result => result.test_attempts && result.test_attempts.length > 0).length;
+            const completed1 = testResults.filter(result => result.review_attempt === 1).length;
+            const completed2 = testResults.filter(result => result.review_attempt === 2).length;
+            const completed3 = testResults.filter(result => result.review_attempt === 3).length;
+            const completed4 = testResults.filter(result => result.review_attempt === 4).length;
+            const completed5 = testResults.filter(result => result.review_attempt >= 5).length;
 
             return {
                 testedWords,
@@ -207,7 +199,6 @@
             window.location.href = 'index.html';
         }
 
-        // 加载测试结果
         window.addEventListener('DOMContentLoaded', loadTestResults);
     </script>
 </body>
