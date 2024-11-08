@@ -92,6 +92,7 @@
                 reader.onload = async function(event) {
                     const text = event.target.result;
                     const words = d3.csvParse(text);
+                    console.log("解析的 CSV 内容:", words);
 
                     let totalWords = words.length;
                     let uploadedWords = 0;
