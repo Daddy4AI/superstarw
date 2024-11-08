@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理单词</title>
-    <!-- d3-dsv for parsing CSV files -->
     <script src="https://d3js.org/d3-dsv.v1.min.js"></script>
 
     <style>
-        /* 进度条样式 */
         #progressBarContainer {
             width: 100%;
             background-color: #f3f3f3;
@@ -16,7 +14,6 @@
             margin: 20px 0;
             display: none;
         }
-
         #progressBar {
             width: 0%;
             height: 24px;
@@ -26,13 +23,10 @@
             color: white;
             border-radius: 8px;
         }
-
         #statusMessage {
             display: none;
             margin-top: 20px;
         }
-
-        /* 底部版本信息样式 */
         footer {
             text-align: center;
             font-size: 12px;
@@ -47,7 +41,6 @@
     <button id="uploadWordsButton">上传单词</button>
     <button id="clearWordsButton">清空单词列表</button>
 
-    <!-- Exam 参数设定 -->
     <h2>Exam 参数设定</h2>
     <label for="maxWordN">每天测试单词数量：</label>
     <select id="maxWordN">
@@ -61,40 +54,33 @@
     </select>
     <button id="saveMaxWordNButton">确认设置</button>
 
-    <!-- 进度条 -->
     <div id="progressBarContainer">
         <div id="progressBar">0%</div>
     </div>
 
-    <!-- 状态信息 -->
     <div id="statusMessage"></div>
 
-    <!-- 底部版本信息 -->
     <footer>
         version 002
     </footer>
 
     <script type="module">
-        // 从 firebaseConfig.js 导入 db (Firestore 实例)
         import { db } from './firebaseConfig.js';
-        import { doc, setDoc, deleteDoc, getDocs, collection, query } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+        import { doc, setDoc, deleteDoc, getDocs, collection } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
-        // 获取香港时间
         const getHongKongTime = () => {
             const now = new Date();
-            const hongKongOffset = 8 * 60;  // 香港时区是 UTC+8
+            const hongKongOffset = 8 * 60;
             const localOffset = now.getTimezoneOffset();
             const hongKongTime = new Date(now.getTime() + (hongKongOffset - localOffset) * 60000);
             return hongKongTime.toISOString();
         };
 
-        // 上传单词逻辑
         document.getElementById('uploadWordsButton').addEventListener('click', async function() {
             const file = document.getElementById('uploadFile').files[0];
             if (file) {
                 const reader = new FileReader();
 
-                // 显示进度条并初始化
                 const progressBar = document.getElementById('progressBar');
                 const progressBarContainer = document.getElementById('progressBarContainer');
                 const statusMessage = document.getElementById('statusMessage');
@@ -105,53 +91,49 @@
 
                 reader.onload = async function(event) {
                     const text = event.target.result;
-                    const words = d3.csvParse(text); // 解析CSV文件
+                    const words = d3.csvParse(text);
 
                     let totalWords = words.length;
                     let uploadedWords = 0;
 
                     for (let index = 0; index < words.length; index++) {
                         const word = words[index];
-                        if (word.Word && word.Word.trim() !== '') {
-                            const wordId = Date.now() + index; // 确保唯一ID
+                        if (word.Word && word.Word.trim() !== '' && word.Chinese && word.Chinese.trim() !== '') {
+                            const wordId = Date.now() + index;
                             try {
                                 await setDoc(doc(db, 'wordlist', wordId.toString()), {
                                     id: wordId,
                                     word: word.Word,
+                                    chinese: word.Chinese, // 添加中文翻译
                                     created_at: getHongKongTime()
                                 });
                                 uploadedWords++;
-                                // 更新进度条
                                 let progress = Math.floor((uploadedWords / totalWords) * 100);
                                 progressBar.style.width = progress + '%';
                                 progressBar.innerHTML = progress + '%';
 
-                                // 上传完成时显示成功信息
                                 if (uploadedWords === totalWords) {
                                     statusMessage.style.display = 'block';
                                     statusMessage.style.color = 'green';
                                     statusMessage.innerHTML = '单词已成功上传!';
                                 }
                             } catch (error) {
-                                // 如果出现错误，显示错误信息
                                 statusMessage.style.display = 'block';
                                 statusMessage.style.color = 'red';
                                 statusMessage.innerHTML = '上传失败，请重试。错误信息: ' + error.message;
                             }
                         } else {
-                            console.log(`跳过空白单词在第 ${index + 1} 行`);
+                            console.log(`跳过空白或缺少中文翻译的单词在第 ${index + 1} 行`);
                         }
                     }
                 };
 
-                // 开始读取文件
                 reader.readAsText(file);
             } else {
-                alert('请上传一个CSV文件。');
+                alert('请上传一个包含英文和中文列的CSV文件。');
             }
         });
 
-        // 清空 wordlist 逻辑
         document.getElementById('clearWordsButton').addEventListener('click', async function() {
             if (confirm('确定要清空所有单词吗？这将无法恢复。')) {
                 try {
@@ -166,18 +148,16 @@
             }
         });
 
-        // 读取并显示当前的 maxWordN 值
         const loadMaxWordN = async () => {
             const maxWordNQuery = await getDocs(collection(db, 'examSettings'));
             maxWordNQuery.forEach((doc) => {
                 const currentMaxWordN = doc.data().maxWordN;
                 if (currentMaxWordN) {
-                    document.getElementById('maxWordN').value = currentMaxWordN;  // 设置下拉框的值
+                    document.getElementById('maxWordN').value = currentMaxWordN;
                 }
             });
         };
 
-        // 保存 maxWordN 的选择
         document.getElementById('saveMaxWordNButton').addEventListener('click', async function() {
             const selectedMaxWordN = document.getElementById('maxWordN').value;
             try {
@@ -188,7 +168,6 @@
             }
         });
 
-        // 页面加载时读取 maxWordN 设置
         window.addEventListener('load', loadMaxWordN);
     </script>
 </body>
