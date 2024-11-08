@@ -35,7 +35,7 @@
     </style>
 </head>
 <body>
-    <h1 id="title">欢迎回来提升单词拼写能力</h1>
+    <h1 id="title">准备今天需要测试的单词，稍等哦...</h1>
     <p style="font-size: 15px; color: #666;">可以尝试拼写这些单词，然后再复习和测试。</p>
     <div id="setupMessage" style="display: none;">Initializing...</div>
     <div id="errorMessage" style="display: none; color: red;"></div>
@@ -267,7 +267,7 @@
         window.addEventListener('load', () => {
             console.log('Page loaded. Running initial setup...');
             initialSetup();
-            document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
+            document.getElementById('title').textContent = `欢迎回来，这是第${todayExamId}次测试`;
             loadTodayWords();
         });
         
