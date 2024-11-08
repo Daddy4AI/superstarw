@@ -33,6 +33,7 @@
             border-collapse: collapse;
         }
 
+        /* 每个单元格 */
         .content-cell {
             display: table-cell;
             position: relative;
@@ -41,26 +42,49 @@
             cursor: pointer;
         }
 
-        /* 背景图片 */
+        /* 左边单元格 */
         .content-cell.left {
-            background: url('pics/cover1.jpg') no-repeat center center;
+            background: url('pics/cover1.jpeg') no-repeat center center;
             background-size: cover;
         }
 
+        /* 中间单元格 */
+        .content-cell.middle {
+            width: 10%;
+            background-color: #f0f0f0; /* 可调整颜色 */
+            cursor: default;
+        }
+
+        /* 右边单元格 */
         .content-cell.right {
-            background: url('pics/cover02.jpg') no-repeat center center;
+            background: url('pics/cover2.jpeg') no-repeat center center;
             background-size: cover;
         }
 
         /* 标题样式 */
         .content-title {
             position: absolute;
-            top: 50%;
+            top: 40%;
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 1.5em;
             color: white;
             text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 设置链接 */
+        .settings-link {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1em;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .settings-link:hover {
+            text-decoration: underline;
         }
 
         /* 页脚 */
@@ -79,11 +103,19 @@
 
     <!-- 主体内容表格 -->
     <div class="content-table">
+        <!-- 左侧单元格 -->
         <div class="content-cell left" onclick="window.location.href='english.html'">
             <div class="content-title">English Spelling Bee</div>
+            <a href="ensetting.html" class="settings-link">设置</a>
         </div>
+
+        <!-- 中间单元格（占10%宽度） -->
+        <div class="content-cell middle"></div>
+
+        <!-- 右侧单元格 -->
         <div class="content-cell right" onclick="window.location.href='chinese.html'">
             <div class="content-title">默写小能手</div>
+            <a href="cnsetting.html" class="settings-link">设置</a>
         </div>
     </div>
 
