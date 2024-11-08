@@ -9,11 +9,12 @@
             font-family: Arial, sans-serif;
             margin: 20px;
         }
-        h1, h2 {
+        h1 {
             text-align: center;
         }
         h2.left-align {
             text-align: left;
+            margin-left: 10%;
         }
         table {
             margin: 20px auto;
@@ -87,13 +88,13 @@
         </table>
     </div>
 
+    <h2 class="left-align">单词测试进度</h2>
     <div class="summary" id="wordStatistics">
-        <h2 class="left-align">单词测试进度</h2>
         <div id="wordStatisticsDetails">加载中...</div>
     </div>
 
+    <h2 class="left-align">测试统计数据</h2>
     <div class="summary" id="examStatistics">
-        <h2 class="left-align">测试统计数据</h2>
         <table>
             <thead>
                 <tr>
@@ -178,11 +179,9 @@
                 const examDuration = examData ? calculateExamDuration(examData.exam_time_start, examData.exam_time_end) : "未知";
                 const averageTimePerWord = examData ? calculateAverageTimePerWord(examData.exam_time_start, examData.exam_time_end, totalWords) : "未知";
 
-
-
                 document.getElementById('testSummaryDetails').innerHTML = `
                     <p>本次考试是第 ${todayExamId} 次考试，一共复习了 ${totalWords} 个单词，正确率为 ${accuracy}%</p>
-                    <p>考试时间为 ${examDuration}，平均每个单词时间为 ${averageTimePerWord} 秒</p>
+                    <p>考试时间为 ${examDuration} 秒，平均每个单词时间为 ${averageTimePerWord} 秒</p>
                 `;
 
                 const stats = calculateWordStatistics(wordList, testResults, totalWordCount);
@@ -207,7 +206,7 @@
                 const correctCount = await countCorrectWords(examId);
                 const accuracy = ((correctCount / totalTestedWords) * 100).toFixed(2);
                 const examDuration = calculateExamDuration(exam.exam_time_start, exam.exam_time_end);
-                const avgTimePerWord = (examDuration / totalTestedWords).toFixed(2);
+                const avgTimePerWord = totalTestedWords > 0 ? (examDuration / totalTestedWords).toFixed(2) : "未知";
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -250,6 +249,48 @@
             return totalWords > 0 ? (durationInSeconds / totalWords).toFixed(2) : 0;
         }
 
+        function calculateWordStatistics(wordList, testResults, totalWords) {
+            const testedWords = testResults.length;
+            const completed1 = testResults.filter(result => result.review_attempt === 1).length;
+            const completed2 = testResults.filter(result => result.review_attempt === 2).length;
+            const completed3 = testResults.filter(result => result.review_attempt === 3).length;
+            const completed4 = testResults.filter(result => result.review_attempt === 4).length;
+            const completed5 = testResults.filter(result => result.review_attempt >= 5).length;
+
+            return {
+                testedWords,
+                completed1,
+                completed2,
+                completed3,
+                completed4,
+                completed5,
+                totalWords
+            };
+        }
+
+        function displayWordStatistics(stats) {
+            const wordStatisticsDetails = document.getElementById('wordStatisticsDetails');
+            wordStatisticsDetails.innerHTML = `
+                ${renderProgressBar('测试过', stats.testedWords, stats.totalWords)}
+                ${renderProgressBar('完成1次', stats.completed1, stats.totalWords)}
+                ${renderProgressBar('完成2次', stats.completed2, stats.totalWords)}
+                ${renderProgressBar('完成3次', stats.completed3, stats.totalWords)}
+                ${renderProgressBar('完成4次', stats.completed4, stats.totalWords)}
+                ${renderProgressBar('完成5次', stats.completed5, stats.totalWords)}
+            `;
+        }
+
+        function renderProgressBar(label, value, total) {
+            const percentage = ((value / total) * 100).toFixed(2);
+            return `
+                <div>
+                    <span>${label}: ${value}/${total} (${percentage}%)</span>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: ${percentage}%;">${percentage}%</div>
+                    </div>
+                </div>
+            `;
+        }
 
         function goToHomePage() {
             window.location.href = 'index.html';
