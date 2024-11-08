@@ -120,7 +120,7 @@
                 // 将 todayExamId 保存到 localStorage
                 localStorage.setItem('todayExamId', todayExamId);
 
-                document.getElementById('title').textContent = `欢迎回来，这是第${todayExamId}次测试`;
+                
 
                 // Console log to verify values are stored successfully
                 console.log('maxWordN saved to localStorage:', localStorage.getItem('maxWordN'));
@@ -173,6 +173,8 @@
 
             // Get today's exam ID
             const todayExamId = Math.max(...Object.values(testResults).map(r => r.last_exam_id || 0)) + 1;
+
+            document.getElementById('title').textContent = `欢迎回来，这是第${todayExamId}次测试`;
 
             // Filter words based on the updated testResult structure
             const YWWord = words.filter(word => {
