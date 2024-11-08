@@ -61,7 +61,7 @@
     <div id="statusMessage"></div>
 
     <footer>
-        version 003
+        version 004
     </footer>
 
     <script type="module">
@@ -77,63 +77,63 @@
         };
 
         document.getElementById('uploadWordsButton').addEventListener('click', async function() {
-            const file = document.getElementById('uploadFile').files[0];
-            if (file) {
-                const reader = new FileReader();
+    const file = document.getElementById('uploadFile').files[0];
+    if (file) {
+        const reader = new FileReader();
 
-                const progressBar = document.getElementById('progressBar');
-                const progressBarContainer = document.getElementById('progressBarContainer');
-                const statusMessage = document.getElementById('statusMessage');
-                progressBarContainer.style.display = 'block';
-                progressBar.style.width = '0%';
-                progressBar.innerHTML = '0%';
-                statusMessage.style.display = 'none';
+        const progressBar = document.getElementById('progressBar');
+        const progressBarContainer = document.getElementById('progressBarContainer');
+        const statusMessage = document.getElementById('statusMessage');
+        progressBarContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.innerHTML = '0%';
+        statusMessage.style.display = 'none';
 
-                reader.onload = async function(event) {
-                    const text = event.target.result;
-                    const words = d3.csvParse(text);
-                    console.log("解析的 CSV 内容:", words);
+        reader.onload = async function(event) {
+            const text = event.target.result;
+            const words = d3.csvParse(text);
 
-                    let totalWords = words.length;
-                    let uploadedWords = 0;
+            let totalWords = words.length;
+            let uploadedWords = 0;
 
-                    for (let index = 0; index < words.length; index++) {
-                        const word = words[index];
-                        if (word.Word && word.Word.trim() !== '' && word.Chinese && word.Chinese.trim() !== '') {
-                            const wordId = Date.now() + index;
-                            try {
-                                await setDoc(doc(db, 'wordlist', wordId.toString()), {
-                                    id: wordId,
-                                    word: word.Word,
-                                    chinese: word.Chinese, // 添加中文翻译
-                                    created_at: getHongKongTime()
-                                });
-                                uploadedWords++;
-                                let progress = Math.floor((uploadedWords / totalWords) * 100);
-                                progressBar.style.width = progress + '%';
-                                progressBar.innerHTML = progress + '%';
+            for (let index = 0; index < words.length; index++) {
+                const word = words[index];
+                if (word.word && word.word.trim() !== '' && word.chinese && word.chinese.trim() !== '') {
+                    const wordId = Date.now() + index;
+                    try {
+                        await setDoc(doc(db, 'wordlist', wordId.toString()), {
+                            id: wordId,
+                            word: word.word,       // 使用小写的字段名称
+                            chinese: word.chinese, // 使用小写的字段名称
+                            created_at: getHongKongTime()
+                        });
+                        uploadedWords++;
+                        let progress = Math.floor((uploadedWords / totalWords) * 100);
+                        progressBar.style.width = progress + '%';
+                        progressBar.innerHTML = progress + '%';
 
-                                if (uploadedWords === totalWords) {
-                                    statusMessage.style.display = 'block';
-                                    statusMessage.style.color = 'green';
-                                    statusMessage.innerHTML = '单词已成功上传!';
-                                }
-                            } catch (error) {
-                                statusMessage.style.display = 'block';
-                                statusMessage.style.color = 'red';
-                                statusMessage.innerHTML = '上传失败，请重试。错误信息: ' + error.message;
-                            }
-                        } else {
-                            console.log(`跳过空白或缺少中文翻译的单词在第 ${index + 1} 行`);
+                        if (uploadedWords === totalWords) {
+                            statusMessage.style.display = 'block';
+                            statusMessage.style.color = 'green';
+                            statusMessage.innerHTML = '单词已成功上传!';
                         }
+                    } catch (error) {
+                        statusMessage.style.display = 'block';
+                        statusMessage.style.color = 'red';
+                        statusMessage.innerHTML = '上传失败，请重试。错误信息: ' + error.message;
                     }
-                };
-
-                reader.readAsText(file);
-            } else {
-                alert('请上传一个包含英文和中文列的CSV文件。');
+                } else {
+                    console.log(`跳过空白或缺少中文翻译的单词在第 ${index + 1} 行`);
+                }
             }
-        });
+        };
+
+        reader.readAsText(file);
+    } else {
+        alert('请上传一个包含英文和中文列的CSV文件。');
+    }
+});
+
 
         document.getElementById('clearWordsButton').addEventListener('click', async function() {
             if (confirm('确定要清空所有单词吗？这将无法恢复。')) {
