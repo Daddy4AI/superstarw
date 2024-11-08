@@ -60,7 +60,7 @@
 </head>
 <body>
     <h1>测试结果</h1>
-
+    <h2>本次测试结果</h2>
     <div class="summary" id="testSummary">
         <p id="testSummaryDetails">加载中...</p>
         <table>
@@ -189,10 +189,10 @@
 
         function calculateWordStatistics(wordList, testResults, totalWords) {
     const testedWords = testResults.length;
-    const completed1 = testResults.filter(result => result.review_attempt <= 1).length;
-    const completed2 = testResults.filter(result => result.review_attempt <= 2).length;
-    const completed3 = testResults.filter(result => result.review_attempt <= 3).length;
-    const completed4 = testResults.filter(result => result.review_attempt <= 4).length;
+    const completed1 = testResults.filter(result => result.review_attempt === 1).length;
+    const completed2 = testResults.filter(result => result.review_attempt === 2).length;
+    const completed3 = testResults.filter(result => result.review_attempt === 3).length;
+    const completed4 = testResults.filter(result => result.review_attempt === 4).length;
     const completed5 = testResults.filter(result => result.review_attempt >= 5).length;
 
     console.log("统计数据：", {
