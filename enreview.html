@@ -140,7 +140,13 @@
                 inputCell.classList.add('input-column');
                 if (index < maxWordN) {
                     const inputField = document.createElement('input');
+                    
                     inputField.type = 'text';
+                    inputField.autocomplete = 'off';
+                    inputField.autocapitalize = 'off';
+                    inputField.autocorrect = 'off';
+                    inputField.spellcheck = 'false';
+
                     inputField.onfocus = () => hideWordAndPlay(wordCell, word.word);
                     inputField.onblur = () => showWord(wordCell, word.word);
                     inputField.onkeypress = (e) => handleKeyPress(e, inputField, wordCell, word.word, row, index);
