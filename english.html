@@ -14,7 +14,6 @@
             background-repeat: no-repeat;
             background-position: center;
             background-attachment: fixed;
-
         }
         button {
             padding: 10px 20px;
@@ -24,16 +23,23 @@
         table {
             margin: 20px auto;
             border-collapse: collapse;
-            font-size: 45px; /* 设置表格文字大小为 25px */
-            background-color: lightblue
+            width: 80%; /* Set table width to 80% of the screen */
+            font-size: 45px; 
+            background-color: lightblue;
         }
         th, td {
             border: 2px solid #ddd;
             padding: 10px;
+            text-align: center; /* Center-align text */
         }
         th {
-            background-color: lightblue
+            background-color: lightblue;
         }
+        /* Set column widths */
+        .column1 { width: 40%; }
+        .column2 { width: 40%; }
+        .column3 { width: 20%; }
+
         footer {
             text-align: center;
             font-size: 12px;
@@ -59,25 +65,20 @@
         import { db } from './enfirebaseConfig.js';
         import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
-
         let maxWordN = 25;
-        let todayExamId = 0; // 确保在函数顶部声明变量
+        let todayExamId = 0; // Ensure variable is declared at the top of the function
 
         async function initialSetup() {
-            
-        try {
+            try {
                 console.log('Starting initial setup...');
 
-            // 获取 examSettings 的 maxWordN 设置
                 const maxWordNDoc = await getDoc(doc(db, 'examSettings', 'maxWordN'));
                 if (maxWordNDoc.exists()) {
-                    maxWordN = maxWordNDoc.data().maxWordN || 25; // 默认 25
+                    maxWordN = maxWordNDoc.data().maxWordN || 25;
                 }
-        
-                // 将 maxWordN 保存到 localStorage
+
                 localStorage.setItem('maxWordN', maxWordN);
 
-                // Check if 'wordlist' collection exists
                 const wordlistSnapshot = await getDocs(collection(db, 'wordlist'));
                 if (wordlistSnapshot.empty) {
                     document.getElementById('setupMessage').style.display = 'none';
@@ -123,19 +124,12 @@
                 // 获取今天的 exam ID 并创建新的考试记录
                 const examSnapshot = await getDocs(collection(db, 'examList'));
                 todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
-                
-
                 // 将 todayExamId 保存到 localStorage
                 localStorage.setItem('todayExamId', todayExamId);
 
-                
-
-                // Console log to verify values are stored successfully
                 console.log('maxWordN saved to localStorage:', localStorage.getItem('maxWordN'));
                 console.log('todayExamId saved to localStorage:', localStorage.getItem('todayExamId'));
 
-
-                
             } catch (error) {
                 console.error('Initial setup failed:', error);
             }
@@ -154,10 +148,7 @@
         }
 
         async function loadTodayWords() {
-            // dummy to be deleted const maxWordN = await getMaxWordN();
             const todayWordList = [];
-
-            // Get all documents from the wordlist and testResult collections
             const [wordSnapshot, testResultSnapshot] = await Promise.all([
                 getDocs(collection(db, 'wordlist')),
                 getDocs(collection(db, 'testResult'))
@@ -179,12 +170,10 @@
                 todayWordList.push(...filteredWords.slice(0, remainingSlots));
             }
 
-            // Get today's exam ID
             const todayExamId = Math.max(...Object.values(testResults).map(r => r.last_exam_id || 0)) + 1;
 
             document.getElementById('title').textContent = `欢迎回来，这是第${todayExamId}次测试`;
 
-            // Filter words based on the updated testResult structure
             const YWWord = words.filter(word => {
                 const result = testResults[word.id];
                 word.status = setWordStatus(word, result);
@@ -254,20 +243,18 @@
             }
 
             displayWords(todayWordList);
-
-            // Save todayWordList to localStorage
             localStorage.setItem("todayWordList", JSON.stringify(todayWordList));
         }
 
         function displayWords(wordList) {
             if (wordList.length > 0) {
                 let tableHtml = `<table>
-                    <tr><th>单词</th><th>中文</th><th>状态</th></tr>`;
+                    <tr><th class="column1">单词</th><th class="column2">中文</th><th class="column3">状态</th></tr>`;
                 wordList.forEach(word => {
                     tableHtml += `<tr>
-                        <td>${word.word}</td>                        
-                        <td>${word.chinese || 'N/A'}</td>
-                        <td>${word.status}</td>
+                        <td class="column1">${word.word}</td>                        
+                        <td class="column2">${word.chinese || 'N/A'}</td>
+                        <td class="column3">${word.status}</td>
                     </tr>`;
                 });
                 tableHtml += "</table>";
@@ -277,14 +264,11 @@
             }
         }
 
-
         window.addEventListener('load', () => {
             console.log('Page loaded. Running initial setup...');
             initialSetup();
             loadTodayWords();
-            
         });
-        
 
         document.getElementById('viewWordsButton').addEventListener('click', loadTodayWords);
 
