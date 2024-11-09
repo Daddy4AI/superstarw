@@ -79,8 +79,6 @@
             color: grey;
             margin-top: 50px;
         }
-
-
     </style>
 </head>
 <body>
@@ -127,11 +125,10 @@
         </table>
     </div>
 
-    <button class="back-button">返回首页</button>
+    <button class="back-button" id="back-button">返回首页</button>
 
     <footer>version 003</footer>
-    
-    
+
     <script type="module">
         import { db } from './enfirebaseConfig.js';
         import { getDoc, doc, getDocs, collection } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
@@ -215,7 +212,10 @@
             const examSnapshot = await getDocs(collection(db, 'examList'));
 
             // 倒序排列每次考试数据
-            const exams = examSnapshot.docs.map(doc => doc.data()).sort((a, b) => b.exam_id - a.exam_id);
+            const exams = examSnapshot.docs
+                .map(doc => doc.data())
+                .filter(exam => exam.exam_id !== 0) // 排除 exam_id 为 0 的记录
+                .sort((a, b) => b.exam_id - a.exam_id);
 
             for (const exam of exams) {
                 const examId = exam.exam_id;
@@ -310,7 +310,7 @@
             `;
         }
 
-        window.addEventListener('DOMContentLoaded', loadTestResults);
+        document.addEventListener('DOMContentLoaded', loadTestResults);
 
         document.getElementById('back-button').addEventListener('click', () => {
             window.location.href = "index.html";
