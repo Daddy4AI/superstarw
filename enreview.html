@@ -12,7 +12,7 @@
         table {
             margin: 20px auto;
             border-collapse: collapse;
-            width: 80%;
+            width: 90%; /* Set table width to 90% of the screen */
             font-size: 20px;
         }
         th, td {
@@ -23,12 +23,18 @@
         th {
             background-color: #f2f2f2;
         }
+        /* Set column widths */
+        .column1 { width: 10%; }
+        .column2 { width: 30%; }
+        .column3 { width: 15%; }
+        .column4 { width: 10%; }
+        .column5 { width: 30%; }
+        .column6 { width: 5%; }
+        
         .word-column, .input-column {
-            width: 20ch;
             text-align: left;
         }
         .result-column {
-            width: 15ch;
             text-align: left;
         }
         .hidden-word {
@@ -50,17 +56,17 @@
     </style>
 </head>
 <body>
-    <h1 id="title"></h1>
+    <h1 id="title">Review Words</h1>
     <h2>需要复习的单词列表</h2>
     <table id="wordTable">
         <thead>
             <tr>
-                <th>序列号</th>
-                <th>单词</th>
-                <th>状态</th>
-                <th>播放</th>
-                <th>拼写</th>
-                <th>复习结果</th>
+                <th class="column1">序列号</th>
+                <th class="column2">单词</th>
+                <th class="column3">状态</th>
+                <th class="column4">播放</th>
+                <th class="column5">拼写</th>
+                <th class="column6">复习结果</th>
             </tr>
         </thead>
         <tbody>
@@ -80,27 +86,22 @@
 
         async function initPage() {
             try {
+                document.addEventListener('DOMContentLoaded', () => {
+                    const maxWordN = localStorage.getItem('maxWordN');
+                    const todayExamId = localStorage.getItem('todayExamId');
 
-            document.addEventListener('DOMContentLoaded', () => {
-                const maxWordN = localStorage.getItem('maxWordN');
-                const todayExamId = localStorage.getItem('todayExamId');
+                    if (maxWordN && todayExamId) {
+                        console.log(`Max Word Number: ${maxWordN}, Today Exam ID: ${todayExamId}`);
+                    } else {
+                        console.error('Missing maxWordN or todayExamId in localStorage');
+                    }
+                });
 
-                if (maxWordN && todayExamId) {
-                    console.log(`Max Word Number: ${maxWordN}, Today Exam ID: ${todayExamId}`);
-                    // 你可以在页面中使用这些值进行展示或其他逻辑
-                } else {
-                    console.error('Missing maxWordN or todayExamId in localStorage');
-                }
-    });
-
-               // 从 localStorage 获取 todayWordList
                 todayWordList = JSON.parse(localStorage.getItem("todayWordList")) || [];
-
                 renderTable();
             } catch (error) {
                 console.error("Error initializing page:", error);
             }
-            
         }
 
         function renderTable() {
@@ -110,43 +111,41 @@
             todayWordList.forEach((word, index) => {
                 const row = document.createElement('tr');
 
-                // 序列号列
                 const indexCell = document.createElement('td');
+                indexCell.classList.add('column1');
                 indexCell.textContent = index + 1;
                 row.appendChild(indexCell);
 
-                // 单词列
                 const wordCell = document.createElement('td');
+                wordCell.classList.add('column2');
                 wordCell.textContent = word.word;
                 wordCell.classList.add('word-column');
                 wordCell.dataset.word = word.word;
                 row.appendChild(wordCell);
 
-                // 状态列
                 const statusCell = document.createElement('td');
+                statusCell.classList.add('column3');
                 statusCell.textContent = word.status;
                 row.appendChild(statusCell);
 
-                // 播放按钮列
                 const playCell = document.createElement('td');
+                playCell.classList.add('column4');
                 const playButton = document.createElement('button');
                 playButton.textContent = "播放";
                 playButton.onclick = () => playAudio(word.word);
                 playCell.appendChild(playButton);
                 row.appendChild(playCell);
 
-                // 拼写输入框列
                 const inputCell = document.createElement('td');
+                inputCell.classList.add('column5');
                 inputCell.classList.add('input-column');
                 if (index < maxWordN) {
                     const inputField = document.createElement('input');
-                    
                     inputField.type = 'text';
                     inputField.autocomplete = 'off';
                     inputField.autocapitalize = 'off';
                     inputField.autocorrect = 'off';
                     inputField.spellcheck = 'false';
-
                     inputField.onfocus = () => hideWordAndPlay(wordCell, word.word);
                     inputField.onblur = () => showWord(wordCell, word.word);
                     inputField.onkeypress = (e) => handleKeyPress(e, inputField, wordCell, word.word, row, index);
@@ -154,8 +153,8 @@
                 }
                 row.appendChild(inputCell);
 
-                // 复习结果列
                 const resultCell = document.createElement('td');
+                resultCell.classList.add('column6');
                 resultCell.classList.add('result-column');
                 row.appendChild(resultCell);
 
@@ -205,8 +204,7 @@
                 .every(cell => cell.textContent === '正确');
 
             if (allCorrect) {
-                // document.getElementById('startTestButton').style.display = 'block';
-                startTestButton.disabled = false; // 启用按钮
+                startTestButton.disabled = false;
             }
         }
 
