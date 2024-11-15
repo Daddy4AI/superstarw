@@ -37,9 +37,28 @@
 </head>
 <body>
     <h1>管理词汇</h1>
+    <h2>上传单词</h2>
     <input type="file" id="uploadFile" />
     <button id="uploadWordsButton">上传单词</button>
     <button id="clearWordsButton">清空单词列表</button>
+
+    <h2>查看单词</h2>
+    <button id="toggleWordListButton">查看数据库现有单词</button>
+    <div id="wordListContainer" style="display: none; margin-top: 20px;">
+        <table id="wordListTable" border="1" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th>单词ID</th>
+                    <th>单词</th>
+                    <th>中文翻译</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 数据会通过JS填充 -->
+            </tbody>
+        </table>
+    </div>
+
 
     <h2>Exam 参数设定</h2>
     <label for="maxWordN">每天测试单词数量：</label>
@@ -148,6 +167,43 @@
                 }
             }
         });
+
+        //查看单词
+        document.getElementById('toggleWordListButton').addEventListener('click', async function () {
+    const wordListContainer = document.getElementById('wordListContainer');
+    const wordListTableBody = document.querySelector('#wordListTable tbody');
+
+    if (wordListContainer.style.display === 'none') {
+        // 清空表格内容
+        wordListTableBody.innerHTML = '';
+
+        try {
+            // 从Firebase获取单词列表
+            const wordListQuery = await getDocs(collection(db, 'wordlist'));
+            wordListQuery.forEach((doc) => {
+                const wordData = doc.data();
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${wordData.id}</td>
+                    <td>${wordData.word}</td>
+                    <td>${wordData.chinese}</td>
+                `;
+                wordListTableBody.appendChild(row);
+            });
+
+            // 显示表格
+            wordListContainer.style.display = 'block';
+            this.textContent = '隐藏数据库现有单词';
+        } catch (error) {
+            alert('加载单词列表失败: ' + error.message);
+        }
+    } else {
+        // 隐藏表格
+        wordListContainer.style.display = 'none';
+        this.textContent = '查看数据库现有单词';
+    }
+});
+
 
         const loadMaxWordN = async () => {
             const maxWordNQuery = await getDocs(collection(db, 'examSettings'));
