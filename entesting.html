@@ -59,7 +59,7 @@
 
     <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
 
-    <div class="footer">version 000</div>
+    <div class="footer">version 010</div>
 
     <script type="module">
         import { db } from './enfirebaseConfig.js';
@@ -161,10 +161,30 @@
     }
 
     currentWord = todayTestList[currentWordIndex];
+    
+    // Fetch the existing test result for the current word
+    try {
+        const wordRef = doc(db, 'testResult', currentWord.id.toString());
+        const resultSnapshot = await getDoc(wordRef);
+        if (resultSnapshot.exists()) {
+            const existingData = resultSnapshot.data();
+            currentWord.review_attempt = existingData.review_attempt || 0;
+            currentWord.test_attempts = existingData.test_attempts || [];
+        } else {
+            currentWord.review_attempt = 0;
+            currentWord.test_attempts = [];
+        }
+    } catch (error) {
+        console.error("Error fetching test result for word:", currentWord.id, error);
+        currentWord.review_attempt = 0;
+        currentWord.test_attempts = [];
+    }
 
-    // Console log 当前单词的完整测试记录，包括 test_attempts
-    console.log(`当前单词: ${currentWord.word}`);
-    console.log('现有的测试记录:', currentWord.test_attempts || '无');
+    // Log the existing test result
+    console.log(`Current test result for word ID ${currentWord.id}:`, {
+        review_attempt: currentWord.review_attempt,
+        test_attempts: currentWord.test_attempts
+    });
 
     document.getElementById("progressTitle").textContent = `${currentWordIndex + 1} of ${maxWordN}个单词`;
     document.getElementById("wordDisplay").textContent = "**********";
@@ -174,6 +194,7 @@
 
     playAudio(currentWord.word);
 }
+
 
 
         function playAudio(word) {
@@ -191,66 +212,72 @@
         }
 
         async function checkSpelling() {
-            const inputField = document.getElementById("inputField");
-            const userSpelling = inputField.value.trim().toLowerCase();
-            const correctSpelling = currentWord.word.toLowerCase();
+    const inputField = document.getElementById("inputField");
+    const userSpelling = inputField.value.trim().toLowerCase();
+    const correctSpelling = currentWord.word.toLowerCase();
 
-            if (userSpelling === correctSpelling) {
-                if (retestCount === 0) {
-                    saveTestResult(true);
-                    document.getElementById("wordTestProgress").textContent = "拼写正确！准备下一个单词";
-                    document.getElementById("nextWordButton").disabled = false;
+    // Log the current test result before processing
+    console.log(`Current test result for word ID ${currentWord.id}:`, {
+        review_attempt: currentWord.review_attempt,
+        test_attempts: currentWord.test_attempts
+    });
 
-                    setTimeout(() => {
-                        loadNextWord();
-                        inputField.value = "";
-                        inputField.focus();
-                    }, 500);
-                } else {
-                    retestCount++;
-                    document.getElementById("wordTestProgress").textContent = `完成第${retestCount - 1}次测试，还有${4 - retestCount}次`;
+    if (userSpelling === correctSpelling) {
+        if (retestCount === 0) {
+            saveTestResult(true);
+            document.getElementById("wordTestProgress").textContent = "拼写正确！准备下一个单词";
+            document.getElementById("nextWordButton").disabled = false;
 
-                    if (retestCount === 4) {
-                        document.getElementById("nextWordButton").disabled = false;
-                        document.getElementById("wordTestProgress").textContent = "准备下一个单词";
+            setTimeout(() => {
+                loadNextWord();
+                inputField.value = "";
+                inputField.focus();
+            }, 500);
+        } else {
+            retestCount++;
+            document.getElementById("wordTestProgress").textContent = `完成第${retestCount - 1}次测试，还有${4 - retestCount}次`;
 
-                        setTimeout(() => {
-                            loadNextWord();
-                            inputField.value = "";
-                            inputField.focus();
-                        }, 500);
-                    } else {
-                        setTimeout(() => {
-                            inputField.value = "";
-                            inputField.focus();
-                        }, 500);
-                    }
-                }
+            if (retestCount === 4) {
+                document.getElementById("nextWordButton").disabled = false;
+                document.getElementById("wordTestProgress").textContent = "准备下一个单词";
+
+                setTimeout(() => {
+                    loadNextWord();
+                    inputField.value = "";
+                    inputField.focus();
+                }, 500);
             } else {
-                if (retestCount === 0) {
-                    saveTestResult(false);
-                    document.getElementById("wordTestProgress").textContent = "拼写错误，再尝试3次";
-                    document.getElementById("wordDisplay").textContent = currentWord.word;
-
-                    setTimeout(() => {
-                        inputField.value = "";
-                        inputField.focus();
-                        document.getElementById("wordDisplay").textContent = "**********";
-                    }, 500);
-
-                    retestCount++;
-                } else if (retestCount < 4) {
-                    document.getElementById("wordTestProgress").textContent = "拼写不正确，继续尝试";
-                    document.getElementById("wordDisplay").textContent = currentWord.word;
-
-                    setTimeout(() => {
-                        inputField.value = "";
-                        inputField.focus();
-                        document.getElementById("wordDisplay").textContent = "**********";
-                    }, 500);
-                }
+                setTimeout(() => {
+                    inputField.value = "";
+                    inputField.focus();
+                }, 500);
             }
         }
+    } else {
+        if (retestCount === 0) {
+            saveTestResult(false);
+            document.getElementById("wordTestProgress").textContent = "拼写错误，再尝试3次";
+            document.getElementById("wordDisplay").textContent = currentWord.word;
+
+            setTimeout(() => {
+                inputField.value = "";
+                inputField.focus();
+                document.getElementById("wordDisplay").textContent = "**********";
+            }, 500);
+
+            retestCount++;
+        } else if (retestCount < 4) {
+            document.getElementById("wordTestProgress").textContent = "拼写不正确，继续尝试";
+            document.getElementById("wordDisplay").textContent = currentWord.word;
+
+            setTimeout(() => {
+                inputField.value = "";
+                inputField.focus();
+                document.getElementById("wordDisplay").textContent = "**********";
+            }, 500);
+        }
+    }
+}
 
         function loadNextWord() {
             document.getElementById("nextWordButton").disabled = true;
