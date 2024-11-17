@@ -97,10 +97,9 @@
                 document.getElementById('setupMessage').textContent = '系统初始设置完成，您可以开始使用系统';
 
                 // 获取今天的 exam ID 并创建新的考试记录
-                const examSnapshot = await getDocs(collection(db, 'examList'));
-                todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
-                // 将 todayExamId 保存到 localStorage
-                localStorage.setItem('todayExamId', todayExamId);
+                // const examSnapshot = await getDocs(collection(db, 'examList'));
+                // todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
+                
 
                 console.log('maxWordN saved to localStorage:', localStorage.getItem('maxWordN'));
                 console.log('todayExamId saved to localStorage:', localStorage.getItem('todayExamId'));
@@ -147,6 +146,8 @@
 
             const todayExamId = Math.max(...Object.values(testResults).map(r => r.last_exam_id || 0)) + 1;
 
+            // 将 todayExamId 保存到 localStorage
+            localStorage.setItem('todayExamId', todayExamId);
             console.log('todayExamId saved to localStorage 2:', localStorage.getItem('todayExamId'));
 
             document.getElementById('title').textContent = `欢迎回来，这是第${todayExamId}次测试`;
