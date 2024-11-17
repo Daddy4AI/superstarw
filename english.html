@@ -80,21 +80,21 @@
 
                 localStorage.setItem('maxWordN', maxWordN);
 
-                const wordlistSnapshot = await getDocs(collection(db, 'wordlist'));
-                if (wordlistSnapshot.empty) {
-                    document.getElementById('setupMessage').style.display = 'none';
-                    document.getElementById('errorMessage').textContent = '没有单词清单，请上传需要复习的单词';
-                    document.getElementById('errorMessage').style.display = 'block';
-                    throw new Error('Wordlist not found');
-                }
+                // const wordlistSnapshot = await getDocs(collection(db, 'wordlist'));
+                // if (wordlistSnapshot.empty) {
+                    // document.getElementById('setupMessage').style.display = 'none';
+                    // document.getElementById('errorMessage').textContent = '没有单词清单，请上传需要复习的单词';
+                    // document.getElementById('errorMessage').style.display = 'block';
+                    // throw new Error('Wordlist not found');
+                // }
 
                 // Check if 'testResult' collection exists and create an initial document if not
-                const testResultRef = doc(db, 'testResult', '0');
-                const testResultSnapshot = await getDoc(testResultRef);
-                console.log('testResult exists, no need to create.');
+                // const testResultRef = doc(db, 'testResult', '0');
+                // const testResultSnapshot = await getDoc(testResultRef);
+                // console.log('testResult exists, no need to create.');
                 
                 
-                document.getElementById('setupMessage').textContent = '系统初始设置完成，您可以开始使用系统';
+                // document.getElementById('setupMessage').textContent = '系统初始设置完成，您可以开始使用系统';
 
                 // 获取今天的 exam ID 并创建新的考试记录
                 // const examSnapshot = await getDocs(collection(db, 'examList'));
