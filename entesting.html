@@ -59,7 +59,7 @@
 
     <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
 
-    <div class="footer">version 008</div>
+    <div class="footer">version 000</div>
 
     <script type="module">
         import { db } from './enfirebaseConfig.js';
@@ -104,24 +104,29 @@
             }
         }
 
+
         function saveTestResult(isCorrect) {
-            const currentTimestamp = new Date().toISOString();
-            const result = {
-                id: currentWord.id,
-                last_exam_id: todayExamId,
-                review_attempt: isCorrect ? (currentWord.review_attempt || 0) + 1 : (currentWord.review_attempt || 0),
-                test_attempts: [...(currentWord.test_attempts || []), { test_result: isCorrect, exam_id: todayExamId, timestamp: currentTimestamp }]
-            };
+    const currentTimestamp = new Date().toISOString();
+    const result = {
+        id: currentWord.id,
+        last_exam_id: todayExamId,
+        review_attempt: isCorrect ? (currentWord.review_attempt || 0) + 1 : (currentWord.review_attempt || 0),
+        test_attempts: [...(currentWord.test_attempts || []), { test_result: isCorrect, exam_id: todayExamId, timestamp: currentTimestamp }]
+    };
 
-            examData.testResults.push(result);
-            console.log('Test result saved locally:', result);
+    // 保存到本地 examData
+    examData.testResults.push(result);
+    console.log('Test result saved locally:', result);
 
-            document.getElementById("wordDisplay").textContent = currentWord.word;
-            document.getElementById("inputField").value = "";
-        }
+    document.getElementById("wordDisplay").textContent = currentWord.word;
+    document.getElementById("inputField").value = "";
+}
+
+
 
         async function saveExamDataToFirebase() {
             document.getElementById('loadingMessage').textContent = '正在保存测试结果，请稍等';
+            document.getElementById('loadingMessage').style.color = 'red';
             document.getElementById('loadingMessage').style.display = 'block';
 
             try {
