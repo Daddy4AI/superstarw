@@ -62,8 +62,9 @@
     <div class="footer">version 010</div>
 
     <script type="module">
-        import { db } from './enfirebaseConfig.js';
-        import { doc, setDoc } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+        import { db } from './enfirebaseConfig.js';        
+        import { doc, getDoc, setDoc, updateDoc, collection } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+
 
         const maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
         const todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
