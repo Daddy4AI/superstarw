@@ -133,6 +133,8 @@
             document.getElementById('loadingMessage').textContent = '正在保存测试结果，请稍等';
             document.getElementById('loadingMessage').style.color = 'red';
             document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('title').textContent = `正在保存测试结果，请稍等...`;
+            document.getElementById('title').style.color = 'red';
 
             try {
                 const examListRef = doc(db, 'examList', todayExamId.toString());
