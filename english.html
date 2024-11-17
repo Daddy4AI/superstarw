@@ -147,6 +147,8 @@
 
             const todayExamId = Math.max(...Object.values(testResults).map(r => r.last_exam_id || 0)) + 1;
 
+            console.log('todayExamId saved to localStorage 2:', localStorage.getItem('todayExamId'));
+
             document.getElementById('title').textContent = `欢迎回来，这是第${todayExamId}次测试`;
 
             const YWWord = words.filter(word => {
