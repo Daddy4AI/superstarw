@@ -114,9 +114,13 @@
         test_attempts: [...(currentWord.test_attempts || []), { test_result: isCorrect, exam_id: todayExamId, timestamp: currentTimestamp }]
     };
 
+    // 更新当前单词的测试记录
+    currentWord.test_attempts = result.test_attempts;
+
     // 保存到本地 examData
     examData.testResults.push(result);
-    console.log('Test result saved locally:', result);
+    console.log('本次测试结果已保存到本地:');
+    console.log(result);
 
     document.getElementById("wordDisplay").textContent = currentWord.word;
     document.getElementById("inputField").value = "";
@@ -148,22 +152,29 @@
             }
         }
 
+
         async function loadWord() {
-            if (currentWordIndex >= todayTestList.length) {
-                examData.examList.exam_time_end = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
-                await saveExamDataToFirebase();
-                return;
-            }
+    if (currentWordIndex >= todayTestList.length) {
+        examData.examList.exam_time_end = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+        await saveExamDataToFirebase();
+        return;
+    }
 
-            currentWord = todayTestList[currentWordIndex];
-            document.getElementById("progressTitle").textContent = `${currentWordIndex + 1} of ${maxWordN}个单词`;
-            document.getElementById("wordDisplay").textContent = "**********";
-            document.getElementById("wordTestProgress").textContent = "测试状态";
-            document.getElementById("inputField").value = "";
-            retestCount = 0;
+    currentWord = todayTestList[currentWordIndex];
 
-            playAudio(currentWord.word);
-        }
+    // Console log 当前单词的完整测试记录，包括 test_attempts
+    console.log(`当前单词: ${currentWord.word}`);
+    console.log('现有的测试记录:', currentWord.test_attempts || '无');
+
+    document.getElementById("progressTitle").textContent = `${currentWordIndex + 1} of ${maxWordN}个单词`;
+    document.getElementById("wordDisplay").textContent = "**********";
+    document.getElementById("wordTestProgress").textContent = "测试状态";
+    document.getElementById("inputField").value = "";
+    retestCount = 0;
+
+    playAudio(currentWord.word);
+}
+
 
         function playAudio(word) {
             const utterance = new SpeechSynthesisUtterance(word);
