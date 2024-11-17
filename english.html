@@ -91,35 +91,9 @@
                 // Check if 'testResult' collection exists and create an initial document if not
                 const testResultRef = doc(db, 'testResult', '0');
                 const testResultSnapshot = await getDoc(testResultRef);
-                if (!testResultSnapshot.exists()) {
-                    console.warn('testResult not found, creating initial record...');
-                    const initialRecord = {
-                        id: 0,
-                        review_attempt: 0,
-                        last_exam_id: 0,
-                        test_attempts: []
-                    };
-                    await setDoc(testResultRef, initialRecord);
-                    console.log('Initial testResult record created');
-                } else {
-                    console.log('testResult exists, no need to create.');
-                }
-
-                // Check if 'examList' collection exists and create an initial document if not
-                const examListRef = doc(db, 'examList', '0');
-                const examListSnapshot = await getDoc(examListRef);
-                if (!examListSnapshot.exists()) {
-                    console.warn('examList not found, initializing...');
-                    const initialExam = {
-                        id: 0,
-                        exam_id: 0,
-                        exam_time_start: new Date().toISOString(),
-                        exam_time_end: null
-                    };
-                    await setDoc(examListRef, initialExam);
-                    console.log('examList initialized');
-                }
-
+                console.log('testResult exists, no need to create.');
+                
+                
                 document.getElementById('setupMessage').textContent = '系统初始设置完成，您可以开始使用系统';
 
                 // 获取今天的 exam ID 并创建新的考试记录

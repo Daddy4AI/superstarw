@@ -8,23 +8,38 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
+            background-color: lightblue;
+            background-image: url('pics/englishbackground.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-attachment: fixed;
         }
         button {
             padding: 10px 20px;
-            margin: 10px;
-            font-size: 16px;
+            margin: 20px;
+            font-size: 20px;
         }
         table {
             margin: 20px auto;
             border-collapse: collapse;
+            width: 80%; /* Set table width to 80% of the screen */
+            font-size: 45px; 
+            background-color: lightblue;
         }
         th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
+            border: 2px solid #ddd;
+            padding: 10px;
+            text-align: center; /* Center-align text */
         }
         th {
-            background-color: #f2f2f2;
+            background-color: lightblue;
         }
+        /* Set column widths */
+        .column1 { width: 40%; }
+        .column2 { width: 40%; }
+        .column3 { width: 20%; }
+
         footer {
             text-align: center;
             font-size: 12px;
@@ -34,38 +49,37 @@
     </style>
 </head>
 <body>
-    <h1>Build a Strong Vocabulary</h1>
+    <h1 id="title">准备今天需要测试的单词，稍等哦...</h1>
+    <p style="font-size: 15px; color: #666;">可以尝试拼写这些单词，然后再复习和测试。</p>
     <div id="setupMessage" style="display: none;">Initializing...</div>
     <div id="errorMessage" style="display: none; color: red;"></div>
 
     <button id="viewWordsButton">查看</button>
     <button id="reviewWordsButton">复习</button>
-    <button id="testWordsButton">测试</button>
+    <button id="testingButton">考试</button>
 
     <div id="wordListContainer"></div>
 
-    <footer>version 005</footer>
+    <footer>version 003</footer>
 
     <script type="module">
-        import { db } from './firebaseConfig.js';
+        import { db } from './enfirebaseConfig.js';
         import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
-        async function getMaxWordN() {
-            try {
-                const docRef = doc(db, 'examSettings', 'maxWordN');
-                const snapshot = await getDoc(docRef);
-                return snapshot.exists() ? snapshot.data().maxWordN : 25;  // 默认 25
-            } catch (error) {
-                console.error('Error fetching maxWordN:', error);
-                return 25;
-            }
-        }
+        let maxWordN = 25;
+        let todayExamId = 0; // Ensure variable is declared at the top of the function
 
         async function initialSetup() {
             try {
                 console.log('Starting initial setup...');
 
-                // Check if 'wordlist' collection exists
+                const maxWordNDoc = await getDoc(doc(db, 'examSettings', 'maxWordN'));
+                if (maxWordNDoc.exists()) {
+                    maxWordN = maxWordNDoc.data().maxWordN || 25;
+                }
+
+                localStorage.setItem('maxWordN', maxWordN);
+
                 const wordlistSnapshot = await getDocs(collection(db, 'wordlist'));
                 if (wordlistSnapshot.empty) {
                     document.getElementById('setupMessage').style.display = 'none';
@@ -107,6 +121,16 @@
                 }
 
                 document.getElementById('setupMessage').textContent = '系统初始设置完成，您可以开始使用系统';
+
+                // 获取今天的 exam ID 并创建新的考试记录
+                const examSnapshot = await getDocs(collection(db, 'examList'));
+                todayExamId = examSnapshot.empty ? 1 : Math.max(...examSnapshot.docs.map(doc => doc.data().exam_id)) + 1;
+                // 将 todayExamId 保存到 localStorage
+                localStorage.setItem('todayExamId', todayExamId);
+
+                console.log('maxWordN saved to localStorage:', localStorage.getItem('maxWordN'));
+                console.log('todayExamId saved to localStorage:', localStorage.getItem('todayExamId'));
+
             } catch (error) {
                 console.error('Initial setup failed:', error);
             }
@@ -125,10 +149,7 @@
         }
 
         async function loadTodayWords() {
-            const maxWordN = await getMaxWordN();
             const todayWordList = [];
-
-            // Get all documents from the wordlist and testResult collections
             const [wordSnapshot, testResultSnapshot] = await Promise.all([
                 getDocs(collection(db, 'wordlist')),
                 getDocs(collection(db, 'testResult'))
@@ -150,10 +171,10 @@
                 todayWordList.push(...filteredWords.slice(0, remainingSlots));
             }
 
-            // Get today's exam ID
             const todayExamId = Math.max(...Object.values(testResults).map(r => r.last_exam_id || 0)) + 1;
 
-            // Filter words based on the updated testResult structure
+            document.getElementById('title').textContent = `欢迎回来，这是第${todayExamId}次测试`;
+
             const YWWord = words.filter(word => {
                 const result = testResults[word.id];
                 word.status = setWordStatus(word, result);
@@ -223,20 +244,18 @@
             }
 
             displayWords(todayWordList);
-
-            // Save todayWordList to localStorage
             localStorage.setItem("todayWordList", JSON.stringify(todayWordList));
         }
 
         function displayWords(wordList) {
             if (wordList.length > 0) {
                 let tableHtml = `<table>
-                    <tr><th>单词</th><th>状态</th><th>翻译</th></tr>`;
+                    <tr><th class="column1">单词</th><th class="column2">中文</th><th class="column3">状态</th></tr>`;
                 wordList.forEach(word => {
                     tableHtml += `<tr>
-                        <td>${word.word}</td>
-                        <td>${word.status}</td>
-                        <td>${word.translation || 'N/A'}</td>
+                        <td class="column1">${word.word}</td>                        
+                        <td class="column2">${word.chinese || 'N/A'}</td>
+                        <td class="column3">${word.status}</td>
                     </tr>`;
                 });
                 tableHtml += "</table>";
@@ -245,22 +264,23 @@
                 document.getElementById('wordListContainer').innerHTML = "今天没有需要复习的单词。";
             }
         }
+
         window.addEventListener('load', () => {
             console.log('Page loaded. Running initial setup...');
             initialSetup();
             loadTodayWords();
         });
-        
 
         document.getElementById('viewWordsButton').addEventListener('click', loadTodayWords);
 
         document.getElementById('reviewWordsButton').addEventListener('click', () => {
-            window.location.href = "review.html";
+            window.location.href = "enreview.html";
+        });
+        
+        document.getElementById('testingButton').addEventListener('click', () => {
+            window.location.href = "entesting.html";
         });
 
-        document.getElementById('testWordsButton').addEventListener('click', () => {
-            window.location.href = "testing.html";
-        });
     </script>
 </body>
 </html>
