@@ -56,10 +56,11 @@
 
     <button id="viewWordsButton">查看</button>
     <button id="reviewWordsButton">复习</button>
-    
+    <button id="testingButton">考试</button>
+
     <div id="wordListContainer"></div>
 
-    <footer>version 002</footer>
+    <footer>version 003</footer>
 
     <script type="module">
         import { db } from './enfirebaseConfig.js';
@@ -276,6 +277,10 @@
             window.location.href = "enreview.html";
         });
         
+        document.getElementById('testingButton').addEventListener('click', () => {
+            window.location.href = "entesting.html";
+        });
+
     </script>
 </body>
 </html>
