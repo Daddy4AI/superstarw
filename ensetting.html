@@ -265,7 +265,7 @@ async function exportTestResults() {
             const data = doc.data();
             testResults.push(data);
         });
-
+        console.log('testResult 开始创建');
         // 创建 JSON 文件
         const jsonData = JSON.stringify(testResults, null, 2);
         const blob = new Blob([jsonData], { type: 'application/json' });
