@@ -42,6 +42,12 @@
     <button id="uploadWordsButton">上传单词</button>
     <button id="clearWordsButton">清空单词列表</button>
 
+    <div id="progressBarContainer">
+        <div id="progressBar">0%</div>
+    </div>
+
+    <div id="statusMessage"></div>
+
     <h2>查看单词</h2>
     <button id="toggleWordListButton">查看数据库现有单词</button>
     <div id="wordListContainer" style="display: none; margin-top: 20px;">
@@ -74,11 +80,15 @@
     </select>
     <button id="saveMaxWordNButton">确认设置</button>
 
-    <div id="progressBarContainer">
-        <div id="progressBar">0%</div>
-    </div>
 
-    <div id="statusMessage"></div>
+
+    <h2>导出和导入 testResult 数据</h2>
+<button id="exportTestResultButton">导出 testResult 数据</button>
+<br><br>
+<input type="file" id="importTestResultInput" accept=".json" />
+<label for="importTestResultInput">导入 JSON 文件覆盖 testResult 数据</label>
+
+
 
     <footer>
         version 002
@@ -241,6 +251,89 @@
         });
 
         window.addEventListener('load', loadMaxWordN);
+        
+        // addddddddddddddddddddddddddddddddddd
+
+        import { getDocs, collection, doc, setDoc } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+import { db } from './enfirebaseConfig.js';
+
+// 导出 testResult 数据
+async function exportTestResults() {
+    try {
+        const testResultQuery = await getDocs(collection(db, 'testResult'));
+        const testResults = [];
+
+        testResultQuery.forEach((doc) => {
+            const data = doc.data();
+            testResults.push(data);
+        });
+
+        // 创建 JSON 文件
+        const jsonData = JSON.stringify(testResults, null, 2);
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        // 创建下载链接
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'testResult.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        console.log('testResult 数据导出成功');
+    } catch (error) {
+        console.error('导出 testResult 数据时发生错误:', error);
+    }
+}
+
+// 按钮绑定
+document.getElementById('exportTestResultButton').addEventListener('click', exportTestResults);
+
+
+// 导入 testResult 数据
+async function importTestResults(event) {
+    const file = event.target.files[0];
+
+    if (file) {
+        const reader = new FileReader();
+
+        reader.onload = async function(event) {
+            try {
+                const jsonData = JSON.parse(event.target.result);
+
+                if (!Array.isArray(jsonData)) {
+                    alert('文件格式错误：需要是包含 testResult 数据的数组。');
+                    return;
+                }
+
+                // 覆盖 Firestore 中的 testResult 数据
+                for (const [index, data] of jsonData.entries()) {
+                    if (data.id !== undefined) {
+                        const docRef = doc(db, 'testResult', data.id.toString());
+                        await setDoc(docRef, data);
+                    } else {
+                        console.warn(`第 ${index + 1} 条记录缺少 ID，已跳过。`);
+                    }
+                }
+
+                alert('testResult 数据导入并覆盖成功！');
+            } catch (error) {
+                console.error('导入 testResult 数据时发生错误:', error);
+                alert('导入失败，请检查文件格式或数据内容。');
+            }
+        };
+
+        reader.readAsText(file);
+    } else {
+        alert('请选择一个 JSON 文件。');
+    }
+}
+
+// 文件输入绑定
+document.getElementById('importTestResultInput').addEventListener('change', importTestResults);
+
+
     </script>
 </body>
 </html>
