@@ -109,6 +109,17 @@
         progressBar.innerHTML = '0%';
         statusMessage.style.display = 'none';
 
+        // 获取现有数据库中的最大 ID（如果有）
+        let currentMaxId = 0;
+        const wordListQuery = await getDocs(collection(db, 'wordlist'));
+        wordListQuery.forEach((doc) => {
+            const wordData = doc.data();
+            const idNumber = parseInt(wordData.id, 10);
+            if (idNumber > currentMaxId) {
+                currentMaxId = idNumber;
+            }
+        });
+
         reader.onload = async function(event) {
             const text = event.target.result;
             const words = d3.csvParse(text);
@@ -119,9 +130,12 @@
             for (let index = 0; index < words.length; index++) {
                 const word = words[index];
                 if (word.word && word.word.trim() !== '' && word.chinese && word.chinese.trim() !== '') {
-                    const wordId = Date.now() + index;
+                    // 生成从当前最大 ID 开始的递增 ID
+                    currentMaxId += 1;
+                    const wordId = currentMaxId.toString().padStart(6, '0'); // 格式化为 6 位数字，例如 "000001"
+
                     try {
-                        await setDoc(doc(db, 'wordlist', wordId.toString()), {
+                        await setDoc(doc(db, 'wordlist', wordId), {
                             id: wordId,
                             word: word.word,       // 使用小写的字段名称
                             chinese: word.chinese, // 使用小写的字段名称
