@@ -91,7 +91,7 @@
 
 
     <footer>
-        version 004
+        version 005
     </footer>
 
     <script type="module">
@@ -295,7 +295,7 @@ async function importTestResults(event) {
 
     if (file) {
         const reader = new FileReader();
-
+        console.log('testResult 数据导入开始');
         reader.onload = async function(event) {
             try {
                 const jsonData = JSON.parse(event.target.result);
