@@ -61,7 +61,7 @@
 
     <div id="wordListContainer"></div>
 
-    <footer>version 004</footer>
+    <footer>version 005</footer>
 
     <script type="module">
         import { db } from './enfirebaseConfig.js';
@@ -226,7 +226,7 @@
         }
 
         // Function to play pronunciation
-        async function playPronunciation(text, rate = 1) {
+        function playPronunciation(text, rate = 1) {
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'en-US'; // Set to English
@@ -236,6 +236,9 @@
                 alert('您的浏览器不支持语音合成功能。');
             }
         }
+
+        // Attach the function to the global window object
+        window.playPronunciation = playPronunciation;
 
         function displayWords(wordList) {
             if (wordList.length > 0) {
