@@ -59,7 +59,7 @@
 
     <input type="text" id="inputField" placeholder="输入单词拼写" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
 
-    <div class="footer">version 010</div>
+    <div class="footer">version 007</div>
 
     <script type="module">
         import { db } from './enfirebaseConfig.js';        
@@ -68,8 +68,10 @@
 
         const maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
         const todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
+        const examTimeInitial = localStorage.getItem('examTimeInitial');
         console.log('maxWordN retrieved:', maxWordN);
         console.log('todayExamId retrieved:', todayExamId);
+        console.log('examTimeInitial retrieved:', examTimeInitial);
 
         let todayTestList = [];
         let currentWordIndex = 0;
@@ -87,6 +89,7 @@
                 examData.examList = {
                     id: todayExamId,
                     exam_id: todayExamId,
+                    exam_time_initial: examTimeInitial,
                     exam_time_start: examTimeStart,
                     exam_time_end: null
                 };

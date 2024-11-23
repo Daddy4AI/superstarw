@@ -115,8 +115,10 @@
                     <th>测试日期</th>
                     <th>单词总数</th>
                     <th>正确率</th>
-                    <th>总测试时间</th>
-                    <th>平均每个单词测试时间</th>
+                    <th>纯测试时间(秒)</th>
+                    <th>平均单词时间(秒)</th>
+                    <th>总预习测试时间(秒)</th>
+                    <th>平均单词时间(秒)</th>
                 </tr>
             </thead>
             <tbody id="examStatisticsTable">
@@ -194,9 +196,13 @@
                 const examDuration = examData ? calculateExamDuration(examData.exam_time_start, examData.exam_time_end) : "未知";
                 const averageTimePerWord = examData ? calculateAverageTimePerWord(examData.exam_time_start, examData.exam_time_end, totalWords) : "未知";
 
+                const examReviewDuration = examData ? calculateExamDuration(examData.exam_time_initial, examData.exam_time_end) : "未知";
+                const averageTimeReviewPerWord = examData ? calculateAverageTimePerWord(examData.exam_time_initial, examData.exam_time_end, totalWords) : "未知";
+
                 document.getElementById('testSummaryDetails').innerHTML = `
                     <p>本次考试是第 ${todayExamId} 次考试，一共复习了 ${totalWords} 个单词，正确率为 ${accuracy}%</p>
                     <p>考试时间为 ${examDuration} 秒，平均每个单词时间为 ${averageTimePerWord} 秒</p>
+                    <p>整体预习和测试时间为 ${examReviewDuration} 秒，平均每个单词时间为 ${averageTimeReviewPerWord} 秒</p>
                 `;
 
                 const stats = calculateWordStatistics(wordList, testResults, totalWordCount);
@@ -225,6 +231,9 @@
                 const accuracy = ((correctCount / totalTestedWords) * 100).toFixed(2);
                 const examDuration = calculateExamDuration(exam.exam_time_start, exam.exam_time_end);
                 const avgTimePerWord = totalTestedWords > 0 ? (examDuration / totalTestedWords).toFixed(2) : "未知";
+                const examReviewDuration = calculateExamDuration(exam.exam_time_initial, exam.exam_time_end);
+                const avgTimeReviewPerWord = totalTestedWords > 0 ? (examReviewDuration / totalTestedWords).toFixed(2) : "未知";
+
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -232,8 +241,10 @@
                     <td>${examDate}</td>
                     <td>${totalTestedWords}</td>
                     <td>${accuracy}%</td>
-                    <td>${examDuration} 秒</td>
-                    <td>${avgTimePerWord} 秒</td>
+                    <td>${examDuration}</td>
+                    <td>${avgTimePerWord}</td>
+                    <td>${examReviewDuration}</td>
+                    <td>${avgTimeReviewPerWord}</td>
                 `;
                 examStatisticsTable.appendChild(row);
             }

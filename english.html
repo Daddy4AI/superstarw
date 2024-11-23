@@ -61,7 +61,7 @@
 
     <div id="wordListContainer"></div>
 
-    <footer>version 005</footer>
+    <footer>version 006</footer>
 
     <script type="module">
         import { db } from './enfirebaseConfig.js';
@@ -261,6 +261,13 @@
                 });
                 tableHtml += "</table>";
                 document.getElementById('wordListContainer').innerHTML = tableHtml;
+
+                // 记录表格加载时间
+                const examTimeInitial = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+                localStorage.setItem('examTimeInitial', examTimeInitial);
+                console.log('Table loaded. Time recorded as:', examTimeInitial);
+
+
             } else {
                 document.getElementById('wordListContainer').innerHTML = "今天没有需要复习的单词。";
             }
