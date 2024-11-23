@@ -36,9 +36,10 @@
             background-color: lightblue;
         }
         /* Set column widths */
-        .column1 { width: 40%; }
-        .column2 { width: 40%; }
+        .column1 { width: 30%; }
+        .column2 { width: 20%; }
         .column3 { width: 20%; }
+        .column4 { width: 30%; }
 
         footer {
             text-align: center;
@@ -60,7 +61,7 @@
 
     <div id="wordListContainer"></div>
 
-    <footer>version 003</footer>
+    <footer>version 004</footer>
 
     <script type="module">
         import { db } from './enfirebaseConfig.js';
@@ -224,15 +225,35 @@
             localStorage.setItem("todayWordList", JSON.stringify(todayWordList));
         }
 
+        // Function to play pronunciation
+        function playPronunciation(text, rate = 1) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US'; // Set to English
+                utterance.rate = rate; // Set speech rate
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('您的浏览器不支持语音合成功能。');
+            }
+        }
+
         function displayWords(wordList) {
             if (wordList.length > 0) {
                 let tableHtml = `<table>
-                    <tr><th class="column1">单词</th><th class="column2">中文</th><th class="column3">状态</th></tr>`;
+                    <tr>
+                    <th class="column1">单词</th>
+                    <th class="column2">发音</th>
+                    <th class="column3">中文</th>
+                    <th class="column4">状态</th>
+                    </tr>`;
                 wordList.forEach(word => {
                     tableHtml += `<tr>
-                        <td class="column1">${word.word}</td>                        
-                        <td class="column2">${word.chinese || 'N/A'}</td>
-                        <td class="column3">${word.status}</td>
+                        <td class="column1">${word.word}</td>  
+                        <td class="column2"> 
+                            <button onclick="playPronunciation('${word.word}', 0.8)">播放</button>
+                        </td>                      
+                        <td class="column3">${word.chinese || 'N/A'}</td>
+                        <td class="column4">${word.status}</td>
                     </tr>`;
                 });
                 tableHtml += "</table>";
