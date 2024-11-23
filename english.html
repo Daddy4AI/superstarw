@@ -226,7 +226,7 @@
         }
 
         // Function to play pronunciation
-        function playPronunciation(text, rate = 1) {
+        async function playPronunciation(text, rate = 1) {
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'en-US'; // Set to English
