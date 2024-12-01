@@ -331,24 +331,24 @@ async function loadWordStatistics() {
         const testResults = testResultSnapshot.docs.map(doc => doc.data());
 
         // 统计测试完成情况
-        const testedWords = testResults.filter(result => 
-            result.test_attempts.some(attempt => attempt.exam_id === todayExamId)
+        const testedWords = testResults.filter(result =>
+            result.review_attempt >= 0
         ).length;
 
         const completed1 = testResults.filter(result =>
-            result.review_attempt === 1
+            result.review_attempt >= 1
         ).length;
 
         const completed2 = testResults.filter(result =>
-            result.review_attempt === 2
+            result.review_attempt >= 2
         ).length;
 
         const completed3 = testResults.filter(result =>
-            result.review_attempt === 3
+            result.review_attempt >= 3
         ).length;
 
         const completed4 = testResults.filter(result =>
-            result.review_attempt === 4
+            result.review_attempt >= 4
         ).length;
 
         const completed5 = testResults.filter(result =>
