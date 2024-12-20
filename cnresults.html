@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试结果分析</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: lightcyan;
+            background-image: none; /* 移除背景图片 */
+        }
+        h1 {
+            text-align: center;
+        }
+        h2.left-align {
+            text-align: left;
+            margin-left: 10%;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 80%;
+            font-size: 16px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .summary {
+            margin-bottom: 20px;
+            font-size: 18px;
+            width: 80%;
+            margin: 20px auto;
+            text-align: left;
+        }
+        .progress-bar {
+            background-color: #f2f2f2;
+            border-radius: 5px;
+            overflow: hidden;
+            width: 80%;
+            margin: 10px auto;
+        }
+        .progress {
+            background-color: #4caf50;
+            height: 20px;
+            text-align: center;
+            color: white;
+        }
+        .back-button {
+            margin-top: 30px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .back-button:hover {
+            background-color: #45a049;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 12px;
+            color: grey;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <h1>测试结果</h1>
+    <div id="examSelectorContainer" style="text-align: center; margin-bottom: 20px;">
+        <label for="examSelector">选择考试：</label>
+        <select id="examSelector"></select>
+    </div>
+
+    <h2 class="left-align">测试结果</h2>
+    <div class="summary" id="testSummary">
+        <p id="testSummaryDetails"></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>单词</th>
+                    <th>测试结果</th>
+                    <th>总测试次数</th>
+                    <th>测试时间（秒）</th>
+                </tr>
+            </thead>
+            <tbody id="testDetailsTable">
+                <!-- 测试结果将通过 JavaScript 动态插入 -->
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="left-align">单词测试进度</h2>
+    <div class="summary" id="wordStatistics">
+        <div id="wordStatisticsDetails">加载中...</div>
+    </div>
+
+    <h2 class="left-align">测试统计数据</h2>
+    <div class="summary" id="examStatistics">
+        <table>
+            <thead>
+                <tr>
+                    <th>Exam ID</th>
+                    <th>测试日期</th>
+                    <th>单词总数</th>
+                    <th>正确率</th>
+                    <th>纯测试时间(秒)</th>
+                    <th>平均单词时间(秒)</th>
+                    <th>总预习测试时间(秒)</th>
+                    <th>平均单词时间(秒)</th>
+                </tr>
+            </thead>
+            <tbody id="examStatisticsTable">
+                <!-- 测试统计数据将通过 JavaScript 动态插入 -->
+            </tbody>
+        </table>
+    </div>
+
+    <button class="back-button" id="back-button">返回首页</button>
+
+    <footer>version 003</footer>
+
+    <script type="module">
+        import { db } from './enfirebaseConfig.js';
+        import { getDoc, doc, getDocs, collection } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+
+        let todayExamId;
+
+        async function populateExamSelector() {
+            try {
+                const examSnapshot = await getDocs(collection(db, 'cnexamList'));
+                const exams = examSnapshot.docs.map(doc => doc.data());
+                const sortedExams = exams.sort((a, b) => b.exam_id - a.exam_id);
+
+                const examSelector = document.getElementById('examSelector');
+                examSelector.innerHTML = '';
+
+                sortedExams.forEach(exam => {
+                    const option = document.createElement('option');
+                    option.value = exam.exam_id;
+                    option.textContent = `Exam ${exam.exam_id}`;
+                    examSelector.appendChild(option);
+                });
+
+                todayExamId = sortedExams[0]?.exam_id || 0;
+                examSelector.value = todayExamId;
+
+                examSelector.addEventListener('change', async (event) => {
+                    todayExamId = parseInt(event.target.value, 10);
+                    await loadTestResults();
+                });
+            } catch (error) {
+                console.error('加载考试选择器时出错:', error);
+            }
+        }
+
+        async function loadTestResults() {
+            try {
+                const testResultSnapshot = await getDocs(collection(db, 'cntestResult'));
+                const testResults = testResultSnapshot.docs.map(doc => doc.data());
+
+                const wordListSnapshot = await getDocs(collection(db, 'cnwordlist'));
+                const wordMap = wordListSnapshot.docs.reduce((map, doc) => {
+                    const data = doc.data();
+                    map[data.id] = data.word;
+                    return map;
+                }, {});
+
+                const examDoc = await getDoc(doc(db, 'cnexamList', todayExamId.toString()));
+                const examData = examDoc.exists() ? examDoc.data() : null;
+                if (!examData) {
+                    console.error('未找到当前考试数据');
+                    return;
+                }
+                const examStartTime = new Date(examData.exam_time_start).getTime();
+
+                const testDetailsTable = document.getElementById('testDetailsTable');
+                testDetailsTable.innerHTML = '';
+
+                const examAttempts = testResults.flatMap(result =>
+                    (result.test_attempts || [])
+                        .filter(attempt => attempt.exam_id === todayExamId)
+                        .map(attempt => ({
+                            ...attempt,
+                            wordId: result.id,
+                            reviewAttempts: result.test_attempts?.length || 0,
+                        }))
+                );
+
+                examAttempts.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+                let previousTimestamp = examStartTime;
+                examAttempts.forEach(attempt => {
+                    const currentTimestamp = new Date(attempt.timestamp).getTime();
+                    const testTime = Math.floor((currentTimestamp - previousTimestamp) / 1000);
+                    previousTimestamp = currentTimestamp;
+
+                    const row = document.createElement('tr');
+                    const word = wordMap[attempt.wordId] || '未知单词';
+
+                    row.innerHTML = `
+                        <td>${word}</td>
+                        <td>${attempt.test_result ? '正确' : '错误'}</td>
+                        <td>${attempt.reviewAttempts}</td>
+                        <td>${testTime} 秒</td>
+                    `;
+                    testDetailsTable.appendChild(row);
+                });
+            } catch (error) {
+                console.error('加载测试结果时出错:', error);
+            }
+        }
+
+        async function countExamWords(examId) {
+            const testResultSnapshot = await getDocs(collection(db, 'cntestResult'));
+            const testResults = testResultSnapshot.docs.map(doc => doc.data());
+            const examWords = testResults.filter(result =>
+                (result.test_attempts || []).some(attempt => attempt.exam_id === examId)
+            );
+            return examWords.length;
+        }
+
+        async function countCorrectWords(examId) {
+            const testResultSnapshot = await getDocs(collection(db, 'cntestResult'));
+            const testResults = testResultSnapshot.docs.map(doc => doc.data());
+            const correctCount = testResults.reduce((count, result) => {
+                return count + (result.test_attempts || []).filter(attempt => attempt.exam_id === examId && attempt.test_result).length;
+            }, 0);
+            return correctCount;
+        }
+
+        async function loadExamStatistics() {
+            const examStatisticsTable = document.getElementById('examStatisticsTable');
+            const examSnapshot = await getDocs(collection(db, 'cnexamList'));
+
+            const exams = examSnapshot.docs
+                .map(doc => doc.data())
+                .filter(exam => exam.exam_id !== 0)
+                .sort((a, b) => b.exam_id - a.exam_id);
+
+            for (const exam of exams) {
+                const examId = exam.exam_id;
+                const examDate = new Date(exam.exam_time_start).toLocaleDateString();
+                const totalTestedWords = await countExamWords(examId);
+                const correctCount = await countCorrectWords(examId);
+                const accuracy = ((correctCount / totalTestedWords) * 100).toFixed(2);
+                const examDuration = calculateExamDuration(exam.exam_time_start, exam.exam_time_end);
+                const avgTimePerWord = totalTestedWords > 0 ? (examDuration / totalTestedWords).toFixed(2) : "未知";
+                const examReviewDuration = calculateExamDuration(exam.exam_time_initial, exam.exam_time_end);
+                const avgTimeReviewPerWord = totalTestedWords > 0 ? (examReviewDuration / totalTestedWords).toFixed(2) : "未知";
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${examId}</td>
+                    <td>${examDate}</td>
+                    <td>${totalTestedWords}</td>
+                    <td>${accuracy}%</td>
+                    <td>${examDuration}</td>
+                    <td>${avgTimePerWord}</td>
+                    <td>${examReviewDuration}</td>
+                    <td>${avgTimeReviewPerWord}</td>
+                `;
+                examStatisticsTable.appendChild(row);
+            }
+        }
+
+        function calculateExamDuration(startTime, endTime) {
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            const durationInSeconds = Math.floor((end - start) / 1000);
+            return durationInSeconds;
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await populateExamSelector();
+            await loadTestResults();
+            await loadExamStatistics();
+        });
+
+        document.getElementById('back-button').addEventListener('click', () => {
+            window.location.href = "index.html";
+        });
+
+    </script>
+</body>
+</html>

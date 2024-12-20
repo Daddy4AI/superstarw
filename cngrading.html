@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>听写词语批改</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: lightcyan;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 90%;
+            font-size: 18px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .column1 { width: 10%; }
+        .column2 { width: 25%; }
+        .column3 { width: 25%; }
+        .column4 { width: 40%; }
+        .button {
+            padding: 5px 10px;
+            margin: 5px;
+            border: none;
+            cursor: pointer;
+            color: white;
+        }
+        .correct {
+            background-color: green;
+        }
+        .incorrect {
+            background-color: red;
+        }
+        #saveResultsButton {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: grey;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #saveResultsButton:enabled {
+            background-color: blue;
+        }
+    </style>
+</head>
+<body>
+    <h1>单词批改页面01</h1>
+    <table id="wordTable">
+        <thead>
+            <tr>
+                <th class="column1">序号</th>
+                <th class="column2">单词</th>
+                <th class="column3">状态</th>
+                <th class="column4">批改</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 动态填充单词列表 -->
+        </tbody>
+    </table>
+    <button id="saveResultsButton" disabled>保存结果</button>
+
+    <script type="module">
+        import { db } from './enfirebaseConfig.js';
+        import { doc, setDoc } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+
+        let todayWordList = JSON.parse(localStorage.getItem("todayWordList")) || [];
+        let reviewResults = [];
+        const todayExamId = parseInt(localStorage.getItem('todayExamId'), 10) || 0;
+
+        function renderTable() {
+            const tableBody = document.getElementById('wordTable').querySelector('tbody');
+            tableBody.innerHTML = '';
+
+            todayWordList.forEach((word, index) => {
+                const row = document.createElement('tr');
+
+                // 序号
+                const indexCell = document.createElement('td');
+                indexCell.textContent = index + 1;
+                row.appendChild(indexCell);
+
+                // 单词
+                const wordCell = document.createElement('td');
+                wordCell.textContent = word.word;
+                row.appendChild(wordCell);
+
+                // 状态
+                const statusCell = document.createElement('td');
+                statusCell.textContent = word.status || '未知';
+                row.appendChild(statusCell);
+
+                // 批改按钮
+                const actionCell = document.createElement('td');
+                const correctButton = document.createElement('button');
+                correctButton.textContent = '正确';
+                correctButton.classList.add('button', 'correct');
+                correctButton.onclick = () => handleReview(index, true, actionCell);
+
+                const incorrectButton = document.createElement('button');
+                incorrectButton.textContent = '错误';
+                incorrectButton.classList.add('button', 'incorrect');
+                incorrectButton.onclick = () => handleReview(index, false, actionCell);
+
+                actionCell.appendChild(correctButton);
+                actionCell.appendChild(incorrectButton);
+                row.appendChild(actionCell);
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        function handleReview(index, isCorrect, actionCell) {
+            const currentWord = todayWordList[index];
+            const currentTimestamp = new Date().toISOString();
+
+            const result = {
+                id: currentWord.id,
+                last_exam_id: todayExamId,
+                review_attempt: isCorrect ? (currentWord.review_attempt || 0) + 1 : (currentWord.review_attempt || 0),
+                test_attempts: [...(currentWord.test_attempts || []), { test_result: isCorrect, exam_id: todayExamId, timestamp: currentTimestamp }]
+            };
+
+            // 更新本地结果
+            reviewResults[index] = result;
+
+            // 更新批改栏内容
+            actionCell.innerHTML = `<span style="margin-right: 20px;">${isCorrect ? '正确' : '错误'}</span>`;
+            const modifyButton = document.createElement('button');
+            modifyButton.textContent = '修改';
+            modifyButton.onclick = () => restoreButtons(index, actionCell);
+            actionCell.appendChild(modifyButton);
+
+            checkCompletion();
+        }
+
+        function restoreButtons(index, actionCell) {
+            actionCell.innerHTML = '';
+
+            const correctButton = document.createElement('button');
+            correctButton.textContent = '正确';
+            correctButton.classList.add('button', 'correct');
+            correctButton.onclick = () => handleReview(index, true, actionCell);
+
+            const incorrectButton = document.createElement('button');
+            incorrectButton.textContent = '错误';
+            incorrectButton.classList.add('button', 'incorrect');
+            incorrectButton.onclick = () => handleReview(index, false, actionCell);
+
+            actionCell.appendChild(correctButton);
+            actionCell.appendChild(incorrectButton);
+        }
+
+        function checkCompletion() {
+            const allReviewed = reviewResults.length === todayWordList.length && reviewResults.every(r => r);
+            document.getElementById('saveResultsButton').disabled = !allReviewed;
+        }
+
+        async function saveResults() {
+            const saveButton = document.getElementById('saveResultsButton');
+            saveButton.textContent = '保存中...';
+            saveButton.disabled = true;
+
+            try {
+                for (const result of reviewResults) {
+                    const wordRef = doc(db, 'cntestResult', result.id.toString());
+                    await setDoc(wordRef, result);
+
+                }
+
+                const examTimeInitial = localStorage.getItem('examTimeInitial');
+                const examTimeStart = localStorage.getItem('examTimeStart');
+                const examTimeEnd = new Date().toISOString();
+
+                const examListRef = doc(db, 'cnexamList', todayExamId.toString());
+                const examListData = {
+                    id: todayExamId,
+                    exam_time_initial: examTimeInitial,
+                    exam_time_start: examTimeStart,
+                    exam_time_end: examTimeEnd,
+                };
+
+                await setDoc(examListRef, examListData);
+
+                alert('结果已成功保存！');
+                window.location.href = 'cnresults.html';
+            } catch (error) {
+                console.error('保存结果失败:', error);
+                alert('保存失败，请重试。');
+            } finally {
+                saveButton.textContent = '保存结果';
+                saveButton.disabled = false;
+            }
+        }
+
+        document.getElementById('saveResultsButton').onclick = saveResults;
+        renderTable();
+    </script>
+</body>
+</html>

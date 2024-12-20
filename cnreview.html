@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>复习今天的单词</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: lightcyan;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 90%;
+            font-size: 18px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .column1 { width: 10%; }
+        .column2 { width: 20%; }
+        .column3 { width: 15%; }
+        .column4 { width: 40%; }
+        .column5 { width: 15%; }
+        .toggle-button {
+            padding: 5px 10px;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="title">需要复习的单词列表</h1>
+    <table id="wordTable">
+        <thead>
+            <tr>
+                <th class="column1">序列号</th>
+                <th class="column2">单词</th>
+                <th class="column3">状态</th>
+                <th class="column4">解释</th>
+                <th class="column5">完成复习?</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 动态填充单词列表 -->
+        </tbody>
+    </table>
+
+    <button id="startTestButton" disabled>开始测试</button>
+
+    <script>
+        let todayWordList = JSON.parse(localStorage.getItem("todayWordList")) || [];
+
+        function renderTable() {
+            const tableBody = document.getElementById('wordTable').querySelector('tbody');
+            tableBody.innerHTML = '';
+
+            todayWordList.forEach((word, index) => {
+                const row = document.createElement('tr');
+
+                // 序列号
+                const indexCell = document.createElement('td');
+                indexCell.textContent = index + 1;
+                row.appendChild(indexCell);
+
+                // 单词及发音按钮
+                const wordCell = document.createElement('td');
+                wordCell.textContent = word.word;
+                const playIcon = document.createElement('span');
+                playIcon.innerHTML = ' 🔊';
+                playIcon.style.cursor = 'pointer';
+                playIcon.title = '播放';
+                playIcon.onclick = () => playAudio(word.word);
+                wordCell.appendChild(playIcon);
+                row.appendChild(wordCell);
+
+                // 状态
+                const statusCell = document.createElement('td');
+                statusCell.textContent = word.status || '未知';
+                row.appendChild(statusCell);
+
+                // 解释
+                const explanationCell = document.createElement('td');
+                explanationCell.textContent = word.explanation || '暂无解释';
+                row.appendChild(explanationCell);
+
+                // 复习状态按钮
+                const resultCell = document.createElement('td');
+                const toggleButton = document.createElement('button');
+                toggleButton.textContent = '未完成';
+                toggleButton.style.backgroundColor = 'red';
+                toggleButton.classList.add('toggle-button');
+                toggleButton.onclick = () => {
+                    if (toggleButton.textContent === '未完成') {
+                        toggleButton.textContent = '完成';
+                        toggleButton.style.backgroundColor = 'green';
+                    } else {
+                        toggleButton.textContent = '未完成';
+                        toggleButton.style.backgroundColor = 'red';
+                    }
+                    checkCompletion();
+                };
+                resultCell.appendChild(toggleButton);
+                row.appendChild(resultCell);
+
+                tableBody.appendChild(row);
+                
+                // 记录表格加载时间
+                const examTimeInitial = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+                localStorage.setItem('examTimeInitial', examTimeInitial);
+
+            });
+        }
+
+        function playAudio(word) {
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 0.8;
+            speechSynthesis.speak(utterance);
+        }
+
+        function checkCompletion() {
+            const allCompleted = Array.from(document.querySelectorAll('.toggle-button'))
+                .every(button => button.textContent === '完成');
+            document.getElementById('startTestButton').disabled = !allCompleted;
+        }
+
+        document.getElementById('startTestButton').onclick = () => {
+            window.location.href = 'cntesting.html';
+        };
+
+        renderTable();
+    </script>
+</body>
+</html>

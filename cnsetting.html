@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理中文词语01</title>
+    <script src="https://d3js.org/d3-dsv.v1.min.js"></script>
+
+    <style>
+        #progressBarContainer {
+            width: 100%;
+            background-color: #f3f3f3;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+        #progressBar {
+            width: 0%;
+            height: 24px;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 24px;
+            color: white;
+            border-radius: 8px;
+        }
+        #statusMessage {
+            display: none;
+            margin-top: 20px;
+        }
+        footer {
+            text-align: center;
+            font-size: 12px;
+            color: grey;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <h1>管理中文词汇</h1>
+    <h2>上传单词</h2>
+    <input type="file" id="uploadFile" />
+    <button id="uploadWordsButton">上传中文词语</button>
+    <button id="clearWordsButton">清空单词列表</button>
+
+    <div id="progressBarContainer">
+        <div id="progressBar">0%</div>
+    </div>
+
+    <div id="statusMessage"></div>
+
+    <h2>查看单词</h2>
+    <button id="toggleWordListButton">查看数据库现有单词</button>
+    <div id="wordListContainer" style="display: none; margin-top: 20px;">
+        <table id="wordListTable" border="1" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th>单词ID</th>
+                    <th>词语</th>
+                    <th>解释</th>
+                    <th>近义词</th>
+                    <th>反义词</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 数据会通过JS填充 -->
+            </tbody>
+        </table>
+    </div>
+
+
+    <h2>Exam 参数设定</h2>
+    <label for="maxWordN">每天测试单词数量：</label>
+    <select id="maxWordN">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="15">15</option>
+        <option value="20">20</option>
+        <option value="25">25</option>
+        <option value="30">30</option>
+        <option value="35">35</option>
+        <option value="40">40</option>
+    </select>
+    <button id="saveMaxWordNButton">确认设置</button>
+
+
+
+    <h2>导出和导入 testResult 数据</h2>
+<button id="exportTestResultButton">导出 testResult 数据</button>
+<br><br>
+<input type="file" id="importTestResultInput" accept=".json" />
+<label for="importTestResultInput">导入 JSON 文件覆盖 testResult 数据</label>
+
+
+
+    <footer>
+        version 005
+    </footer>
+
+    <script type="module">
+        import { db } from './enfirebaseConfig.js';
+        import { doc, setDoc, deleteDoc, getDocs, collection } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+
+        const getHongKongTime = () => {
+            const now = new Date();
+            const hongKongOffset = 8 * 60;
+            const localOffset = now.getTimezoneOffset();
+            const hongKongTime = new Date(now.getTime() + (hongKongOffset - localOffset) * 60000);
+            return hongKongTime.toISOString();
+        };
+
+        document.getElementById('uploadWordsButton').addEventListener('click', async function() {
+    const file = document.getElementById('uploadFile').files[0];
+    if (file) {
+        const reader = new FileReader();
+
+        const progressBar = document.getElementById('progressBar');
+        const progressBarContainer = document.getElementById('progressBarContainer');
+        const statusMessage = document.getElementById('statusMessage');
+        progressBarContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.innerHTML = '0%';
+        statusMessage.style.display = 'none';
+
+        // 获取现有数据库中的最大 ID（如果有）
+        let currentMaxId = 0;
+        const wordListQuery = await getDocs(collection(db, 'cnwordlist'));
+        wordListQuery.forEach((doc) => {
+            const wordData = doc.data();
+            const idNumber = parseInt(wordData.id, 10);
+            if (idNumber > currentMaxId) {
+                currentMaxId = idNumber;
+            }
+        });
+
+        reader.onload = async function(event) {
+            const text = event.target.result;
+            const words = d3.csvParse(text);
+
+            let totalWords = words.length;
+            let uploadedWords = 0;
+
+            for (let index = 0; index < words.length; index++) {
+                const word = words[index];
+                if (word.word && word.word.trim() !== '' && word.main && word.main.trim() !== '') {
+                    // 生成从当前最大 ID 开始的递增 ID
+                    currentMaxId += 1;
+                    const wordId = currentMaxId.toString().padStart(6, '0'); // 格式化为 6 位数字，例如 "000001"
+
+                    try {
+                        await setDoc(doc(db, 'cnwordlist', wordId), {
+                            id: wordId,
+                            word: word.word,       // 使用小写的字段名称
+                            main: word.main, //确定是否是主要词语
+                            jyc: word.jyc, // 使用小写的字段名称 近义词
+                            fyc: word.fyc, // 使用小写的字段名称 反义词
+                            explanation: word.explanation, //这个词语的简要意思
+                            created_at: getHongKongTime()
+                        });
+                        uploadedWords++;
+                        let progress = Math.floor((uploadedWords / totalWords) * 100);
+                        progressBar.style.width = progress + '%';
+                        progressBar.innerHTML = progress + '%';
+
+                        if (uploadedWords === totalWords) {
+                            statusMessage.style.display = 'block';
+                            statusMessage.style.color = 'green';
+                            statusMessage.innerHTML = '单词已成功上传!';
+                        }
+                    } catch (error) {
+                        statusMessage.style.display = 'block';
+                        statusMessage.style.color = 'red';
+                        statusMessage.innerHTML = '上传失败，请重试。错误信息: ' + error.message;
+                    }
+                } else {
+                    console.log(`跳过空白或缺少中文翻译的单词在第 ${index + 1} 行`);
+                }
+            }
+        };
+
+        reader.readAsText(file);
+    } else {
+        alert('请上传一个包含单词，近义词和反义词的CSV文件。');
+    }
+});
+
+
+        document.getElementById('clearWordsButton').addEventListener('click', async function() {
+            if (confirm('确定要清空所有单词吗？这将无法恢复。')) {
+                try {
+                    const wordListQuery = await getDocs(collection(db, 'cnwordlist'));
+                    wordListQuery.forEach(async (doc) => {
+                        await deleteDoc(doc.ref);
+                    });
+                    alert('单词列表已清空。');
+                } catch (error) {
+                    alert('清空单词列表失败: ' + error.message);
+                }
+            }
+        });
+
+        //查看单词
+        document.getElementById('toggleWordListButton').addEventListener('click', async function () {
+    const wordListContainer = document.getElementById('wordListContainer');
+    const wordListTableBody = document.querySelector('#wordListTable tbody');
+
+    if (wordListContainer.style.display === 'none') {
+        // 清空表格内容
+        wordListTableBody.innerHTML = '';
+
+        try {
+            // 从Firebase获取单词列表
+            const wordListQuery = await getDocs(collection(db, 'cnwordlist'));
+            wordListQuery.forEach((doc) => {
+                const wordData = doc.data();
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${wordData.id}</td>
+                    <td>${wordData.word}</td>
+                    <td>${wordData.explanation}</td>
+                    <td>${wordData.jyc}</td>
+                    <td>${wordData.fyc}</td>                    
+                `;
+                wordListTableBody.appendChild(row);
+            });
+
+            // 显示表格
+            wordListContainer.style.display = 'block';
+            this.textContent = '隐藏数据库现有单词';
+        } catch (error) {
+            alert('加载单词列表失败: ' + error.message);
+        }
+    } else {
+        // 隐藏表格
+        wordListContainer.style.display = 'none';
+        this.textContent = '查看数据库现有单词';
+    }
+});
+
+
+        const loadMaxWordN = async () => {
+            const maxWordNQuery = await getDocs(collection(db, 'cnexamSettings'));
+            maxWordNQuery.forEach((doc) => {
+                const currentMaxWordN = doc.data().maxWordN;
+                if (currentMaxWordN) {
+                    document.getElementById('maxWordN').value = currentMaxWordN;
+                }
+            });
+        };
+
+        document.getElementById('saveMaxWordNButton').addEventListener('click', async function() {
+            const selectedMaxWordN = document.getElementById('maxWordN').value;
+            try {
+                await setDoc(doc(db, 'cnexamSettings', 'maxWordN'), { maxWordN: selectedMaxWordN });
+                alert('已保存测试单词数量设置：' + selectedMaxWordN);
+            } catch (error) {
+                alert('保存设置时出错：' + error.message);
+            }
+        });
+
+        window.addEventListener('load', loadMaxWordN);
+        
+        // addddddddddddddddddddddddddddddddddd
+
+
+// 导出 testResult 数据
+async function exportTestResults() {
+    try {
+        const testResultQuery = await getDocs(collection(db, 'cntestResult'));
+        const testResults = [];
+
+        testResultQuery.forEach((doc) => {
+            const data = doc.data();
+            testResults.push(data);
+        });
+        console.log('cntestResult 开始创建');
+        // 创建 JSON 文件
+        const jsonData = JSON.stringify(testResults, null, 2);
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        // 创建下载链接
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'cntestResult.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        console.log('cntestResult 数据导出成功');
+    } catch (error) {
+        console.error('导出 cntestResult 数据时发生错误:', error);
+    }
+}
+
+// 按钮绑定
+document.getElementById('exportTestResultButton').addEventListener('click', exportTestResults);
+
+
+// 导入 cntestResult 数据
+async function importTestResults(event) {
+    const file = event.target.files[0];
+
+    if (file) {
+        const reader = new FileReader();
+        console.log('cntestResult 数据导入开始');
+        reader.onload = async function(event) {
+            try {
+                const jsonData = JSON.parse(event.target.result);
+
+                if (!Array.isArray(jsonData)) {
+                    alert('文件格式错误：需要是包含 cntestResult 数据的数组。');
+                    return;
+                }
+
+                // 覆盖 Firestore 中的 cntestResult 数据
+                for (const [index, data] of jsonData.entries()) {
+                    if (data.id !== undefined) {
+                        const docRef = doc(db, 'cntestResult', data.id.toString());
+                        await setDoc(docRef, data);
+                    } else {
+                        console.warn(`第 ${index + 1} 条记录缺少 ID，已跳过。`);
+                    }
+                }
+
+                alert('cntestResult 数据导入并覆盖成功！');
+            } catch (error) {
+                console.error('导入 cntestResult 数据时发生错误:', error);
+                alert('导入失败，请检查文件格式或数据内容。');
+            }
+        };
+
+        reader.readAsText(file);
+    } else {
+        alert('请选择一个 JSON 文件。');
+    }
+}
+
+// 文件输入绑定
+document.getElementById('importTestResultInput').addEventListener('change', importTestResults);
+
+
+    </script>
+</body>
+</html>

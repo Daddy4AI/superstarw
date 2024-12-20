@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>听写词语</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-image: url('pics/entestingbackground.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-attachment: fixed;
+            font-size: 15px;
+        }
+        .loading {
+            font-size: 14px;
+            color: grey;
+            margin-bottom: 10px;
+        }
+        .buttons {
+            margin: 25px;
+        }
+        .word-display {
+            font-size: 25px;
+            margin: 20px;
+            cursor: pointer;
+        }
+
+
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: grey;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loadingMessage">正在加载单词，请稍后...</div>
+    <h1 id="title"></h1>
+    <h2 id="progressTitle"></h2>
+
+    <div class="buttons">
+        <button id="playSoundButton">播放单词</button>
+        <div class="word-display" id="wordDisplay">**********</div>
+        <div class="word-display" id="wordDisplay">请在书本上默写单词</div>
+
+        <button id="nextWordButton">下一个单词</button>
+    </div>
+
+    <div class="footer">version 001</div>
+
+    <script type="module">
+        import { db } from './enfirebaseConfig.js';        
+        import { doc, getDoc, setDoc, updateDoc, collection } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+
+
+        const maxWordN = parseInt(localStorage.getItem('maxWordN'), 10);
+        const todayExamId = parseInt(localStorage.getItem('todayExamId'), 10);
+        const examTimeInitial = localStorage.getItem('examTimeInitial');
+        console.log('maxWordN retrieved:', maxWordN);
+        console.log('todayExamId retrieved:', todayExamId);
+        console.log('examTimeInitial retrieved:', examTimeInitial);
+
+        let todayTestList = [];
+        let currentWordIndex = 0;
+        let currentWord = null;
+        let examData = {
+            cnexamList: {},
+            testResults: []
+        };
+
+        async function initPage() {
+            try {
+                console.log('Starting initial setup...');
+                const examTimeStart = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+                localStorage.setItem('examTimeStart', examTimeStart);
+
+                examData.cnexamList = {
+                    id: todayExamId,
+                    exam_id: todayExamId,
+                    exam_time_initial: examTimeInitial,
+                    exam_time_start: examTimeStart,
+                    exam_time_end: null
+                };
+                console.log(examData.cnexamList)
+
+                document.getElementById('title').textContent = `开始今天的测试，这是第${todayExamId}次测试`;
+                todayTestList = JSON.parse(localStorage.getItem("todayWordList")).slice(0, maxWordN) || [];
+                if (!todayTestList.length) {
+                    alert("没有找到今天的测试单词，请检查是否已经生成 todayTestList");
+                    return;
+                }
+
+                document.getElementById('loadingMessage').style.display = "none";
+                loadWord();
+            } catch (error) {
+                console.error("Error initializing page:", error);
+            }
+        }
+
+
+async function loadWord() {
+    if (currentWordIndex >= todayTestList.length) {
+        
+        const examTimeEnd = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+        localStorage.setItem('examTimeEnd', examTimeEnd);
+        console.log('Table loaded. Time recorded as:', examTimeEnd);
+
+        console.log('所有单词都完成默写');
+        alert("完成今天的测试");
+        window.location.href = "cngrading.html";
+    }
+
+    currentWord = todayTestList[currentWordIndex];
+
+    document.getElementById("progressTitle").textContent = `${currentWordIndex + 1} of ${maxWordN}个单词`;
+    document.getElementById("wordDisplay").textContent = "**********";
+
+    
+    playAudio(currentWord.word);
+}
+
+
+        function playAudio(word) {
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 0.8;
+            speechSynthesis.speak(utterance);
+        }
+
+        function playCurrentWord() {
+            playAudio(currentWord.word);
+        }
+
+        function loadNextWord() {
+            document.getElementById("nextWordButton").disabled = false;
+            currentWordIndex++;
+            loadWord();
+        }
+
+        document.getElementById("playSoundButton").addEventListener("click", playCurrentWord);
+        document.getElementById("nextWordButton").addEventListener("click", loadNextWord);
+        window.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

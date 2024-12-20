@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成为中文默写最强高手</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: lightblue;
+            background-image: url('pics/englishbackground.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 20px;
+            font-size: 20px;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 80%; /* Set table width to 80% of the screen */
+            font-size: 45px; 
+            background-color: lightblue;
+        }
+        th, td {
+            border: 2px solid #ddd;
+            padding: 10px;
+            text-align: center; /* Center-align text */
+        }
+        th {
+            background-color: lightblue;
+        }
+        /* Set column widths */
+        .column1 { width: 30%; }
+        .column2 { width: 15%; }
+        .column3 { width: 25%; }
+        .column4 { width: 30%; }
+
+        footer {
+            text-align: center;
+            font-size: 12px;
+            color: grey;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="title">准备今天需要测试的单词，稍等哦...</h1>
+    <p style="font-size: 15px; color: #666;">可以尝试拼写这些单词，然后再复习和测试。</p>
+    <div id="setupMessage" style="display: none;">Initializing...</div>
+    <div id="errorMessage" style="display: none; color: red;"></div>
+
+    <button id="viewWordsButton">查看</button>
+    <button id="reviewWordsButton">复习</button>
+    <button id="testingButton">考试</button>
+
+    <div id="wordListContainer"></div>
+
+    <footer>version 001</footer>
+
+    <script type="module">
+        import { db } from './enfirebaseConfig.js';
+        import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+
+        let maxWordN = 25;
+        let todayExamId = 0; // Ensure variable is declared at the top of the function
+
+        async function initialSetup() {
+            try {
+                console.log('Starting initial setup...');
+
+                const maxWordNDoc = await getDoc(doc(db, 'cnexamSettings', 'maxWordN'));
+                if (maxWordNDoc.exists()) {
+                    maxWordN = maxWordNDoc.data().maxWordN || 25;
+                }
+                localStorage.setItem('maxWordN', maxWordN);
+
+                const todayExamId = Math.max(...Object.values(cntestResults).map(r => r.last_exam_id || 0)) + 1;
+                localStorage.setItem('todayExamId', todayExamId);
+
+            // 将 todayExamId 保存到 localStorage
+                
+                console.log('maxWordN saved to localStorage:', localStorage.getItem('maxWordN'));
+                console.log('todayExamId saved to localStorage:', localStorage.getItem('todayExamId'));
+
+            } catch (error) {
+                console.error('Initial setup failed:', error);
+            }
+        }
+
+        function setWordStatus(word, result) {
+            if (!result || result.test_attempts.length === 0) {
+                if (!result || result.review_attempt === 0) {
+                    return "新单词";
+                }
+            } else if (result.review_attempt === 0) {
+                return "初始复习";
+            } else {
+                return `第${result.review_attempt}次复习`;
+            }
+        }
+
+        async function loadTodayWords() {
+            const todayWordList = [];
+            const [wordSnapshot, testResultSnapshot] = await Promise.all([
+                getDocs(collection(db, 'cnwordlist')),
+                getDocs(collection(db, 'cntestResult'))
+            ]);
+
+            if (wordSnapshot.empty || testResultSnapshot.empty) {
+                console.error('No cnwordlist or test results found.');
+                return;
+            }
+
+            const words = wordSnapshot.docs.map(doc => doc.data());
+            const testResults = {};
+            testResultSnapshot.forEach(doc => {
+                testResults[doc.id] = doc.data();
+            });
+
+            function addWordsToList(filteredWords) {
+                const remainingSlots = maxWordN - todayWordList.length;
+                todayWordList.push(...filteredWords.slice(0, remainingSlots));
+            }
+
+            const todayExamId = Math.max(...Object.values(testResults).map(r => r.last_exam_id || 0)) + 1;
+
+            // 将 todayExamId 保存到 localStorage
+            localStorage.setItem('todayExamId', todayExamId);
+            console.log('todayExamId saved to localStorage 2:', localStorage.getItem('todayExamId'));
+
+            document.getElementById('title').textContent = `欢迎回来，这是第${todayExamId}次测试`;
+
+            const YWWord = words.filter(word => {
+                const result = testResults[word.id];
+                word.status = setWordStatus(word, result);
+                return (
+                    result &&
+                    result.review_attempt === 0 &&
+                    result.last_exam_id === todayExamId - 1 &&
+                    result.test_attempts.length > 0 &&
+                    result.test_attempts[result.test_attempts.length - 1].test_result === false
+                );
+            });
+            addWordsToList(YWWord);
+
+            const R2Word = words.filter(word => {
+                const result = testResults[word.id];
+                word.status = setWordStatus(word, result);
+                return (
+                    result &&
+                    result.review_attempt === 1 &&
+                    result.last_exam_id <= todayExamId - 2
+                );
+            });
+            addWordsToList(R2Word);
+
+            const R6Word = words.filter(word => {
+                const result = testResults[word.id];
+                word.status = setWordStatus(word, result);
+                return (
+                    result &&
+                    result.review_attempt === 2 &&
+                    result.last_exam_id <= todayExamId - 6
+                );
+            });
+            addWordsToList(R6Word);
+
+            const R13Word = words.filter(word => {
+                const result = testResults[word.id];
+                word.status = setWordStatus(word, result);
+                return (
+                    result &&
+                    result.review_attempt === 3 &&
+                    result.last_exam_id <= todayExamId - 13
+                );
+            });
+            addWordsToList(R13Word);
+
+            const R20Word = words.filter(word => {
+                const result = testResults[word.id];
+                word.status = setWordStatus(word, result);
+                return (
+                    result &&
+                    result.review_attempt === 4 &&
+                    result.last_exam_id <= todayExamId - 20
+                );
+            });
+            addWordsToList(R20Word);
+
+            if (todayWordList.length < maxWordN) {
+                const untestedWords = words.filter(word => {
+                    const result = testResults[word.id];
+                    return !result || (!result.test_attempts || result.test_attempts.length === 0);
+                });
+                untestedWords.forEach(word => {
+                    word.status = "新单词";
+                });
+                addWordsToList(untestedWords);
+            }
+
+            displayWords(todayWordList);
+            localStorage.setItem("todayWordList", JSON.stringify(todayWordList));
+        }
+
+        // Function to play pronunciation
+        function playPronunciation(text, rate = 1) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN'; // Set to Chinese
+                utterance.rate = rate; // Set speech rate
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('您的浏览器不支持语音合成功能。');
+            }
+        }
+
+        // Attach the function to the global window object
+        window.playPronunciation = playPronunciation;
+
+        function displayWords(wordList) {
+            if (wordList.length > 0) {
+                let tableHtml = `<table>
+                    <tr>
+                    <th class="column1">词语</th>
+                    <th class="column3">近义词</th>
+                    <th class="column3">反义词</th>
+                    </tr>`;
+                wordList.forEach(word => {
+                    if(word.main === '1') {
+                    tableHtml += `<tr>
+                        <td class="column1">${word.word} 
+                        <span class="play-icon" onclick="playPronunciation('${word.word}', 0.8)" title="播放">🔊</span>
+                        </td>                      
+
+                        <td class="column2">${word.jyc || ' '}
+                            <span class="play-icon" onclick="playPronunciation('${word.jyc}', 0.8)" title="播放">🔊</span>                          
+                        </td>
+                        
+                        <td class="column3">
+                            ${word.fyc || ' '}
+                            ${word.fyc ? `<span class="play-icon" onclick="playPronunciation('${word.fyc}', 0.8)" title="播放">🔊</span>` : ''}
+                        </td>
+                        
+                    </tr>`;
+                }
+                });
+                tableHtml += "</table>";
+                document.getElementById('wordListContainer').innerHTML = tableHtml;
+
+                // 记录表格加载时间
+                const examTimeInitial = new Date().toLocaleString('en-US', { timeZone: 'Asia/Hong_Kong' });
+                localStorage.setItem('examTimeInitial', examTimeInitial);
+                console.log('Table loaded. Time recorded as:', examTimeInitial);
+
+
+            } else {
+                document.getElementById('wordListContainer').innerHTML = "今天没有需要复习的单词。";
+            }
+        }
+
+        window.addEventListener('load', () => {
+            console.log('Page loaded. Running initial setup...');
+            initialSetup();
+            loadTodayWords();
+        });
+
+        document.getElementById('viewWordsButton').addEventListener('click', loadTodayWords);
+
+        document.getElementById('reviewWordsButton').addEventListener('click', () => {
+            window.location.href = "cnreview.html";
+        });
+        
+        document.getElementById('testingButton').addEventListener('click', () => {
+            window.location.href = "cntesting.html";
+        });
+
+    </script>
+</body>
+</html>
