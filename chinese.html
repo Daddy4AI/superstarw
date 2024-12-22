@@ -128,7 +128,7 @@
                 todayWordList.push(...filteredWords.slice(0, remainingSlots));
             }
 
-            const todayExamId = Math.max(...Object.values(testResults).map(r => r.last_exam_id || 0)) + 1;
+            const todayExamId = Math.max(...Object.values(cntestResult).map(r => r.last_exam_id || 0)) + 1;
 
             // 将 todayExamId 保存到 localStorage
             localStorage.setItem('todayExamId', todayExamId);
