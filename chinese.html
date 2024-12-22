@@ -80,10 +80,7 @@
                 }
                 localStorage.setItem('maxWordN', maxWordN);              
                 console.log('maxWordN saved to localStorage:', localStorage.getItem('maxWordN'));
-              
-         
-                
-
+             
             } catch (error) {
                 console.error('Initial setup failed:', error);
             }
@@ -109,7 +106,7 @@
             ]);
 
             if (wordSnapshot.empty || testResultSnapshot.empty) {
-                console.error('No cnwordlist or test results found.');
+                console.error('No cnwordlist or test results found1.');
                 return;
             }
 
@@ -264,6 +261,7 @@
             console.log('Page loaded. Running initial setup...');
             initialSetup();
             loadTodayWords();
+
         });
 
         document.getElementById('viewWordsButton').addEventListener('click', loadTodayWords);
