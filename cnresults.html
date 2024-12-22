@@ -283,9 +283,97 @@
             return durationInSeconds;
         }
 
+async function loadWordStatistics() {
+    try {
+        const wordListSnapshot = await getDocs(collection(db, 'cnwordlist'));
+        const wordList = wordListSnapshot.docs.map(doc => doc.data());
+        const totalWords = wordList.length;
+
+        const testResultSnapshot = await getDocs(collection(db, 'cntestResult'));
+        const testResults = testResultSnapshot.docs.map(doc => doc.data());
+
+        // 统计测试完成情况
+        const testedWords = testResults.filter(result =>
+            result.review_attempt >= 0
+        ).length;
+
+        const completed1 = testResults.filter(result =>
+            result.review_attempt >= 1
+        ).length;
+
+        const completed2 = testResults.filter(result =>
+            result.review_attempt >= 2
+        ).length;
+
+        const completed3 = testResults.filter(result =>
+            result.review_attempt >= 3
+        ).length;
+
+        const completed4 = testResults.filter(result =>
+            result.review_attempt >= 4
+        ).length;
+
+        const completed5 = testResults.filter(result =>
+            result.review_attempt >= 5
+        ).length;
+
+        // 组织统计数据
+        const statistics = {
+            testedWords,
+            completed1,
+            completed2,
+            completed3,
+            completed4,
+            completed5,
+            totalWords
+        };
+
+        displayWordStatistics(statistics);
+    } catch (error) {
+        console.error('加载单词测试进度时出错:', error);
+    }
+}
+
+function displayWordStatistics(stats) {
+    // 设置默认值，防止 undefined 错误
+    const {
+        testedWords = 0,
+        completed1 = 0,
+        completed2 = 0,
+        completed3 = 0,
+        completed4 = 0,
+        completed5 = 0,
+        totalWords = 1 // 避免除以零
+    } = stats || {};
+
+    const wordStatisticsDetails = document.getElementById('wordStatisticsDetails');
+    wordStatisticsDetails.innerHTML = `
+        ${renderProgressBar('测试过', testedWords, totalWords)}
+        ${renderProgressBar('完成1次', completed1, totalWords)}
+        ${renderProgressBar('完成2次', completed2, totalWords)}
+        ${renderProgressBar('完成3次', completed3, totalWords)}
+        ${renderProgressBar('完成4次', completed4, totalWords)}
+        ${renderProgressBar('完成5次', completed5, totalWords)}
+    `;
+}
+
+        function renderProgressBar(label, value, total) {
+            const percentage = ((value / total) * 100).toFixed(2);
+            return `
+                <div>
+                    <span>${label}: ${value}/${total} (${percentage}%)</span>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: ${percentage}%;">${percentage}%</div>
+                    </div>
+                </div>
+            `;
+        }
+
+
         document.addEventListener('DOMContentLoaded', async () => {
             await populateExamSelector();
             await loadTestResults();
+            await loadWordStatistics();
             await loadExamStatistics();
         });
 
