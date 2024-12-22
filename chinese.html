@@ -80,7 +80,7 @@
                 }
                 localStorage.setItem('maxWordN', maxWordN);
 
-                const todayExamId = Math.max(...Object.values(cntestResult).map(r => r.last_exam_id || 0)) + 1;
+                const todayExamId = Math.max(...Object.values(cntestResults).map(r => r.last_exam_id || 0)) + 1;
                 localStorage.setItem('todayExamId', todayExamId);
 
             // 将 todayExamId 保存到 localStorage
@@ -209,7 +209,7 @@
         }
 
         // Function to play pronunciation
-        function playPronunciation(text, rate = 0.7) {
+        function playPronunciation(text, rate = 1) {
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'zh-CN'; // Set to Chinese
