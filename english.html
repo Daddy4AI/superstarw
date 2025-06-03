@@ -226,16 +226,16 @@
         }
 
         // Function to play pronunciation
-        function playPronunciation(text, rate = 0.4) {
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-GB'; // Set to English
-                utterance.rate = rate; // Set speech rate
-                window.speechSynthesis.speak(utterance);
-            } else {
-                alert('您的浏览器不支持语音合成功能。');
-            }
-        }
+        //function playPronunciation(text, rate = 0.4) {
+            //if ('speechSynthesis' in window) {
+                //const utterance = new SpeechSynthesisUtterance(text);
+                //utterance.lang = 'en-GB'; // Set to English
+                //utterance.rate = rate; // Set speech rate
+                //window.speechSynthesis.speak(utterance);
+            //} else {
+                //alert('您的浏览器不支持语音合成功能。');
+            //}
+        //}
 
         // Function to play pronunciation
         function playPronunciation(text, rate = 0.4) {
@@ -252,18 +252,16 @@
                 }
                 window.speechSynthesis.speak(utterance);
             }
-
         
-        // Try immediately if voices are already loaded
-        if (speechSynthesis.getVoices().length > 0) {
-            const danielVoice = speechSynthesis.getVoices().find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
-            if (danielVoice) {
-            utterance.voice = danielVoice;
+            // Try immediately if voices are already loaded
+            if (speechSynthesis.getVoices().length > 0) {
+                const danielVoice = speechSynthesis.getVoices().find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+                if (danielVoice) {
+                utterance.voice = danielVoice;
+                }
+                window.speechSynthesis.speak(utterance);
             }
-            window.speechSynthesis.speak(utterance);
-        }
     
-
             } else {
                 alert('您的浏览器不支持语音合成功能。');
             }
