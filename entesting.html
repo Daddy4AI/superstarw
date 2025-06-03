@@ -338,6 +338,7 @@ System: danielVoice;
         document.getElementById("playSoundButton").addEventListener("click", playCurrentWord);
         document.getElementById("nextWordButton").addEventListener("click", loadNextWord);
         document.getElementById("inputField").addEventListener("focus", resetWordDisplay);
+        document.getElementById("inputField").addEventListener("focus", playCurrentWord);
         document.getElementById("inputField").addEventListener("keypress", (e) => {
             if (e.key === 'Enter') {
                 checkSpelling();
