@@ -177,9 +177,9 @@
             const utterance = new SpeechSynthesisUtterance(word);
             utterance.lang = 'en-GB';
             utterance.rate = 0.5; // Set playrate to 0.5 as specified
-            const voices = speechSynthesis.getVoices();
-            const danielVoice = voices.find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
-            utterance.voice = danielVoice;      
+            //const voices = speechSynthesis.getVoices();
+            //const danielVoice = voices.find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+            //utterance.voice = danielVoice;      
             speechSynthesis.speak(utterance);
         };
         
