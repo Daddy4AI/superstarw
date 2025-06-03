@@ -203,12 +203,29 @@
 
 
 
-function playAudio(word) {
-  const utterance = new SpeechSynthesisUtterance(word);
-  utterance.lang = 'en-GB';
-  utterance.rate = 0.5; // Set playrate to 0.5 as specified
-  speechSynthesis.speak(utterance);
-}
+        function playAudio(word) {
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-GB';
+            utterance.rate = 0.5;
+
+              // Set Daniel voice when voices are loaded
+              speechSynthesis.onvoiceschanged = () => {
+                const danielVoice = speechSynthesis.getVoices().find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+                if (danielVoice) {
+                  utterance.voice = danielVoice;
+                }
+                speechSynthesis.speak(utterance);
+              };
+
+        // Try immediately if voices are already loaded
+        if (speechSynthesis.getVoices().length > 0) {
+            const danielVoice = speechSynthesis.getVoices().find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+            if (danielVoice) {
+            utterance.voice = danielVoice;
+            }
+            speechSynthesis.speak(utterance);
+        }
+        }
 
 
         
