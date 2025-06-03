@@ -229,7 +229,7 @@
         function playPronunciation(text, rate = 0.4) {
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US'; // Set to English
+                utterance.lang = 'en-GB'; // Set to English
                 utterance.rate = rate; // Set speech rate
                 window.speechSynthesis.speak(utterance);
             } else {
