@@ -158,7 +158,7 @@
                 word.status = setWordStatus(word, result);
                 return (
                     result &&
-                    result.review_attempt === 0 &&
+                    //result.review_attempt === 0 &&
                     result.last_exam_id === todayExamId - 1 &&
                     result.test_attempts.length > 0 &&
                     result.test_attempts[result.test_attempts.length - 1].test_result === false
