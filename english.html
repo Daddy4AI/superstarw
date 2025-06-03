@@ -228,6 +228,11 @@
         // Function to play pronunciation
         function playPronunciation(text, rate = 0.4) {
             if ('speechSynthesis' in window) {
+
+                const voices = speechSynthesis.getVoices();
+                const danielVoice = voices.find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+                utterance.voice = danielVoice;
+
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'en-US'; // Set to English
                 utterance.rate = rate; // Set speech rate
