@@ -237,6 +237,65 @@
             }
         }
 
+        // Function to play pronunciation
+        function playPronunciation(text, rate = 0.4) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-GB'; // Set to English
+                utterance.rate = rate; // Set speech rate
+
+            // Set Daniel voice when voices are loaded
+              speechSynthesis.onvoiceschanged = () => {
+                const danielVoice = speechSynthesis.getVoices().find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+                if (danielVoice) {
+                  utterance.voice = danielVoice;
+                }
+                window.speechSynthesis.speak(utterance);
+            }
+
+        
+        // Try immediately if voices are already loaded
+        if (speechSynthesis.getVoices().length > 0) {
+            const danielVoice = speechSynthesis.getVoices().find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+            if (danielVoice) {
+            utterance.voice = danielVoice;
+            }
+            window.speechSynthesis.speak(utterance);
+        }
+    
+
+            } else {
+                alert('您的浏览器不支持语音合成功能。');
+            }
+        }
+
+        
+        function playAudio(word) {
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-GB';
+            utterance.rate = 0.5;
+
+              // Set Daniel voice when voices are loaded
+              speechSynthesis.onvoiceschanged = () => {
+                const danielVoice = speechSynthesis.getVoices().find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+                if (danielVoice) {
+                  utterance.voice = danielVoice;
+                }
+                speechSynthesis.speak(utterance);
+              };
+
+        // Try immediately if voices are already loaded
+        if (speechSynthesis.getVoices().length > 0) {
+            const danielVoice = speechSynthesis.getVoices().find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+            if (danielVoice) {
+            utterance.voice = danielVoice;
+            }
+            speechSynthesis.speak(utterance);
+        }
+        }
+
+
+
         // Attach the function to the global window object
         window.playPronunciation = playPronunciation;
 
