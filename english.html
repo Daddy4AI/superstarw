@@ -158,7 +158,7 @@
                 word.status = setWordStatus(word, result);
                 return (
                     result &&
-                    result.review_attempt === 0 &&
+                    //result.review_attempt === 0 &&
                     result.last_exam_id === todayExamId - 1 &&
                     result.test_attempts.length > 0 &&
                     result.test_attempts[result.test_attempts.length - 1].test_result === false
@@ -228,11 +228,6 @@
         // Function to play pronunciation
         function playPronunciation(text, rate = 0.4) {
             if ('speechSynthesis' in window) {
-
-                const voices = speechSynthesis.getVoices();
-                const danielVoice = voices.find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
-                utterance.voice = danielVoice;
-
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'en-US'; // Set to English
                 utterance.rate = rate; // Set speech rate

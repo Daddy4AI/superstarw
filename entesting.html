@@ -203,13 +203,56 @@
 
 
 
-        function playAudio(word) {
-            const utterance = new SpeechSynthesisUtterance(word);
-            utterance.lang = 'en-GB';
-            utterance.rate = 0.7;
-            speechSynthesis.speak(utterance);
-        }
+function playAudio(word) {
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.lang = 'en-GB';
+  utterance.rate = 0.5; // Set playrate to 0.5 as specified
 
+  // Wait for voices to load
+  speechSynthesis.onvoiceschanged = () => {
+    const voices = speechSynthesis.getVoices();
+    const danielVoice = voices.find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+    if (danielVoice) {
+      utterance.voice = danielVoice;
+      console.log('Using voice: Daniel (en-GB)');
+    } else {
+      // Fallback to another en-GB voice
+      const fallbackVoice = voices.find(voice => voice.lang === 'en-GB');
+      if (fallbackVoice) {
+        utterance.voice = fallbackVoice;
+        console.log(`Daniel not found, using fallback: ${fallbackVoice.name} (en-GB)`);
+      } else {
+        console.log('No en-GB voices found, using system default');
+      }
+    }
+    speechSynthesis.speak(utterance);
+  };
+
+  // Trigger voice loading if voices are already available
+  if (speechSynthesis.getVoices().length > 0) {
+    const voices = speechSynthesis.getVoices();
+    const danielVoice = voices.find(voice => voice.name === 'Daniel' && voice.lang === 'en-GB');
+    if (danielVoice) {
+      utterance.voice = dannielVoice;
+
+System: danielVoice;
+      utterance.lang = 'en-GB';
+      utterance.rate = 0.5;
+      console.log('Using voice: Daniel (en-GB)');
+    } else {
+      const fallbackVoice = voices.find(voice => voice.lang === 'en-GB');
+      if (fallbackVoice) {
+        utterance.voice = fallbackVoice;
+        
+      } else {
+        
+      }
+    }
+    speechSynthesis.speak(utterance);
+  }
+}
+
+        
         function playCurrentWord() {
             playAudio(currentWord.word);
         }
@@ -295,6 +338,7 @@
         document.getElementById("playSoundButton").addEventListener("click", playCurrentWord);
         document.getElementById("nextWordButton").addEventListener("click", loadNextWord);
         document.getElementById("inputField").addEventListener("focus", resetWordDisplay);
+        document.getElementById("inputField").addEventListener("focus", playCurrentWord);
         document.getElementById("inputField").addEventListener("keypress", (e) => {
             if (e.key === 'Enter') {
                 checkSpelling();
