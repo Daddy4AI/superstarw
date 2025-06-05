@@ -338,11 +338,11 @@ document.getElementById('importTestResultInput').addEventListener('change', impo
 async function exportExamList() {
     try {
         const testResultQuery = await getDocs(collection(db, 'examList'));
-        const testResults = [];
+        const examList = [];
 
         testResultQuery.forEach((doc) => {
             const data = doc.data();
-            testResults.push(data);
+            examList.push(data);
         });
         console.log('examList 开始创建');
         // 创建 JSON 文件
