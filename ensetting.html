@@ -83,15 +83,17 @@
 
 
     <h2>导出和导入 testResult 数据</h2>
-<button id="exportTestResultButton">导出 testResult 数据</button>
-<br><br>
-<input type="file" id="importTestResultInput" accept=".json" />
-<label for="importTestResultInput">导入 JSON 文件覆盖 testResult 数据</label>
-
-
+        <button id="exportTestResultButton">导出 testResult 数据</button>
+        <br><br>
+        <input type="file" id="importTestResultInput" accept=".json" />
+        <label for="importTestResultInput">导入 JSON 文件覆盖 testResult 数据</label>
+        
+    <h2>导出 examList 数据</h2>
+        <button id="exportExamListButton">导出 ExamList 数据</button>
+        <br><br>
 
     <footer>
-        version 005
+        version 006
     </footer>
 
     <script type="module">
@@ -330,6 +332,40 @@ async function importTestResults(event) {
 
 // 文件输入绑定
 document.getElementById('importTestResultInput').addEventListener('change', importTestResults);
+
+
+// 导出 examList 数据
+async function exportExamList() {
+    try {
+        const testResultQuery = await getDocs(collection(db, 'examList'));
+        const testResults = [];
+
+        testResultQuery.forEach((doc) => {
+            const data = doc.data();
+            testResults.push(data);
+        });
+        console.log('examList 开始创建');
+        // 创建 JSON 文件
+        const jsonData = JSON.stringify(examList, null, 2);
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        // 创建下载链接
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'examList.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        console.log('examList 数据导出成功');
+    } catch (error) {
+        console.error('导出 examList 数据时发生错误:', error);
+    }
+}
+
+// 按钮绑定
+document.getElementById('exportExamListButton').addEventListener('click', exportExamList);
 
 
     </script>
